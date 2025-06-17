@@ -1,1 +1,9 @@
+Flask
+pandas
+numpy
+xgboost
+scikit-learn
+matplotlib
+shap
+gunicorn
 
