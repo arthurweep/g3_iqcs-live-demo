@@ -57,8 +57,10 @@
             <div class="module">
                 <h2>模块一：产线心电图</h2>
                 <form id="monitor-form"><div class="param-grid">
-                    {% for feature in cache.features if not any(k in feature for k in ['ratio', 'indicator', 'density']) %}
+                    {% for feature in cache.features %}
+                        {% if not ('ratio' in feature or 'indicator' in feature or 'density' in feature) %}
                         <div><label for="monitor_{{ feature }}">{{ feature }}:</label><input type="number" step="any" id="monitor_{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
+                        {% endif %}
                     {% endfor %}
                 </div><button type="submit">监控检查</button></form>
                 <div id="monitor-spinner" class="spinner"></div><div id="monitor-results" class="results-box"></div>
@@ -71,8 +73,10 @@
             <div class="module">
                 <h2>模块三：AI侦探</h2>
                 <form id="predict-form"><div class="param-grid">
-                     {% for feature in cache.features if not any(k in feature for k in ['ratio', 'indicator', 'density']) %}
+                     {% for feature in cache.features %}
+                        {% if not ('ratio' in feature or 'indicator' in feature or 'density' in feature) %}
                         <div><label for="{{ feature }}">{{ feature }}:</label><input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
+                        {% endif %}
                      {% endfor %}
                 </div><button type="submit">开始诊断</button></form>
                 <div id="predict-spinner" class="spinner"></div><div id="predict-results" class="results-box"></div>
@@ -160,9 +164,23 @@
             el.innerHTML = adjustmentsHTML;
         }
 
-        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayMonitorResults);
-        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', (f) => ({ product_id: f.product_id.value }), displayRecommendResults);
-        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayPredictResults);
+        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', 
+            (form) => {
+                const data = {};
+                new FormData(form).forEach((value, key) => { data[key] = parseFloat(value); });
+                return data;
+            }, displayMonitorResults);
+
+        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', 
+            (form) => ({ product_id: form.product_id.value }), 
+            displayRecommendResults);
+
+        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', 
+            (form) => {
+                const data = {};
+                new FormData(form).forEach((value, key) => { data[key] = parseFloat(value); });
+                return data;
+            }, displayPredictResults);
     </script>
 </body>
 </html>
