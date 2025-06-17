@@ -42,16 +42,28 @@
         </div>
         
         {% if model_ready %}
-        <!-- ... (训练结果概览 HTML 保持不变) ... -->
+        <div class="module upload-section">
+            <h2>训练结果概览 (基于文件: {{ cache.filename }})</h2>
+             <div style="display: flex; gap: 2em; align-items: flex-start;">
+                <div style="flex:1;">
+                    <h3>模型性能指标</h3>
+                    <table><tr><th>指标</th><th>值</th></tr>
+                        <tr><td>准确率 (Accuracy)</td><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
+                        <tr><td>不合格品召回率 (Recall NG)</td><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
+                        <tr><td>不合格品精确率 (Precision NG)</td><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
+                        <tr><td>不合格品F1分数 (F1 NG)</td><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
+                    </table>
+                </div>
+                <div style="flex:1;"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance" style="max-width: 100%;"></div>
+            </div>
+        </div>
 
         <div class="grid-container">
             <div class="module">
                 <h2>模块一：产线心电图</h2>
                 <form id="monitor-form"><div class="param-grid">
-                    {% for feature, name in cache.param_map.items() %}
-                        {% if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
+                    {% for feature, name in cache.param_map.items() if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
                         <div><label for="monitor_{{ feature }}">{{ name }}:</label><input type="number" step="any" id="monitor_{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
-                        {% endif %}
                     {% endfor %}
                 </div><button type="submit">监控检查</button></form>
                 <div id="monitor-spinner" class="spinner"></div><div id="monitor-results" class="results-box"></div>
@@ -64,10 +76,8 @@
             <div class="module">
                 <h2>模块三：AI侦探</h2>
                 <form id="predict-form"><div class="param-grid">
-                     {% for feature, name in cache.param_map.items() %}
-                        {% if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
+                     {% for feature, name in cache.param_map.items() if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
                         <div><label for="{{ feature }}">{{ name }}:</label><input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
-                        {% endif %}
                      {% endfor %}
                 </div><button type="submit">开始诊断</button></form>
                 <div id="predict-spinner" class="spinner"></div><div id="predict-results" class="results-box"></div>
@@ -79,29 +89,55 @@
     </div>
 
     <script>
-        // ... (handleApiCall, displayMonitorResults, displayRecommendResults 函数保持不变) ...
+        async function handleApiCall(formId, spinnerId, resultsId, apiUrl, getPayload, displayFunc) {
+            const form = document.getElementById(formId);
+            if(form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const spinner = document.getElementById(spinnerId), resultsDiv = document.getElementById(resultsId);
+                    spinner.style.display = 'block'; resultsDiv.innerHTML = '正在处理请求...';
+                    const payload = getPayload(form);
+                    try {
+                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.error || '请求失败');
+                        displayFunc(resultsId, result, payload);
+                    } catch (error) { resultsDiv.innerHTML = `<p style="color: red;">错误: ${error.message}</p>`; } 
+                    finally { spinner.style.display = 'none'; }
+                });
+            }
+        }
+        
+        function displayMonitorResults(resultsId, result) {
+            const el = document.getElementById(resultsId);
+            const statusColor = result.status === 'ok' ? 'green' : 'orange';
+            el.innerHTML = `<div style="color: ${statusColor}; font-weight: bold;">${result.status === 'ok' ? '过程稳定' : '过程异常预警!'}</div>${result.messages.map(msg => `<p>${msg}</p>`).join('')}`;
+        }
+        
+        function displayRecommendResults(resultsId, result) {
+            const el = document.getElementById(resultsId);
+            let paramsHTML = '<table><tr><th>参数</th><th>推荐值</th></tr>';
+            for (const [key, value] of Object.entries(result.recommended_params)) {
+                paramsHTML += `<tr><td>${result.param_map[key] || key}</td><td>${value.toFixed(3)}</td></tr>`;
+            }
+            paramsHTML += '</table>';
+            el.innerHTML = `<h3>${result.message}</h3>${paramsHTML}`;
+        }
 
         async function displayPredictResults(resultsId, result, payload) {
             const el = document.getElementById(resultsId);
-            
             let statusText, statusClass;
-            if (result.status === 'ok') {
-                statusText = '合格 (OK)'; statusClass = 'status-ok';
-            } else if (result.status === 'warning') {
-                statusText = '过程预警 (Warning)'; statusClass = 'status-warning';
-            } else {
-                statusText = '不合格 (NG)'; statusClass = 'status-ng';
-            }
+            if (result.status === 'ok') { statusText = '合格 (OK)'; statusClass = 'status-ok'; } 
+            else if (result.status === 'warning') { statusText = '过程预警 (Warning)'; statusClass = 'status-warning'; } 
+            else { statusText = '不合格 (NG)'; statusClass = 'status-ng'; }
 
             let reasonHTML = `<h4>诊断依据</h4><ul>${result.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>`;
 
             el.innerHTML = `<h3>诊断结论</h3>
                 <div class="verdict-box ${statusClass}">
-                    <p style="font-weight:bold; font-size: 1.2em;">最终判定: ${statusText}</p>
-                    ${reasonHTML}
+                    <p style="font-weight:bold; font-size: 1.2em;">最终判定: ${statusText}</p>${reasonHTML}
                 </div>
-                <h4>AI模型内部判断</h4>
-                <table>
+                <h4>AI模型内部判断</h4><table>
                 <tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr>
                 <tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr>
                 </table>
@@ -109,7 +145,7 @@
                 <img src="data:image/png;base64,${result.waterfall_plot}" alt="SHAP Plot" style="max-width: 100%;">
                 <div id="adjustment-section" class="results-box" style="margin-top:1em;"></div>`;
             
-            if (result.status === 'ng') { // 只在最终判定为NG时才触发调整建议
+            if (result.status === 'ng') {
                 const adjSection = document.getElementById('adjustment-section');
                 adjSection.innerHTML = '<h3>正在生成调整建议...</h3><div class="spinner" style="display:block;"></div>';
                 try {
@@ -122,7 +158,28 @@
             }
         }
         
-        // ... (displayAdjustmentResults 和 handleApiCall 绑定事件的函数保持不变) ...
+        function displayAdjustmentResults(elementId, result, threshold) {
+            const el = document.getElementById(elementId);
+            let adjustmentsHTML = `<h3>智能优化建议</h3><p>以下建议旨在将样本的合格(OK)概率提升至阈值 <strong>${(threshold*100).toFixed(2)}%</strong> 以上。</p>`;
+            if (Object.keys(result.adjustments).length > 0) {
+                adjustmentsHTML += '<table><tr><th>待调整特征</th><th>当前值</th><th>建议调整量</th><th>调整后目标值</th><th>此调整对OK概率的预期贡献</th></tr>';
+                for (const [key, value] of Object.entries(result.adjustments)) {
+                    adjustmentsHTML += `<tr>
+                        <td>${result.param_map[key] || key}</td><td>${value.original_value.toFixed(3)}</td>
+                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change > 0 ? '+':''}${value.change.toFixed(3)}</td>
+                        <td style="font-weight:bold;">${value.suggested_value.toFixed(3)}</td>
+                        <td style="color:green; font-weight:bold;">+${(value.prob_contribution*100).toFixed(2)}%</td>
+                    </tr>`;
+                }
+                adjustmentsHTML += '</table>';
+            }
+            adjustmentsHTML += `<p style="margin-top:1em;"><strong>${result.message}</strong></p>`;
+            el.innerHTML = adjustmentsHTML;
+        }
+
+        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayMonitorResults);
+        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', (f) => ({ product_id: f.product_id.value }), displayRecommendResults);
+        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayPredictResults);
     </script>
 </body>
 </html>
