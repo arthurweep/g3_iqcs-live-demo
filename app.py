@@ -85,23 +85,26 @@ def calculate_adjustment_suggestions(clf, current_values_array, feature_names, t
         if best_move['feature_idx'] != -1 and best_move['prob_gain'] > 1e-6:
             idx = best_move['feature_idx']
             feature_name = feature_names[idx]
-            old_val = current_values[idx]
-            new_val = best_move['new_value']
-            
-            current_values[idx] = new_val
+            current_values[idx] = best_move['new_value']
             adjustments_made[feature_name] = {
                 'original_value': float(original_values[idx]),
-                'suggested_value': float(new_val),
-                'change': float(new_val - original_values[idx]),
+                'suggested_value': float(best_move['new_value']),
+                'change': float(best_move['new_value'] - original_values[idx]),
                 'prob_contribution': float(best_move['prob_gain'])
             }
-            app.logger.info(f"迭代 {i+1}: 建议调整 '{feature_name}'")
         else:
             app.logger.info(f"迭代 {i+1}: 未找到能显著提升概率的调整，终止。")
             break
-
-    final_prob = clf.predict_proba(pd.DataFrame([current_values], columns=feature_names).values)[0, 1]
     
+    # 重新计算最终概率，确保复合特征正确
+    final_df = pd.DataFrame([current_values], columns=feature_names)
+    final_df['pressure_speed_ratio'] = final_df['F_cut_act'] / final_df['v_cut_act']
+    final_df['stress_indicator'] = final_df['F_break_peak'] / final_df['t_glass_meas']
+    final_df['energy_density'] = final_df['F_cut_act'] * final_df['v_cut_act']
+    final_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    final_df = final_df.fillna(model_cache.get('feature_defaults', {}))
+    final_prob = clf.predict_proba(final_df.values)[0, 1]
+
     if not adjustments_made:
         message = "未能找到有效的参数调整建议。该样本可能是一个“顽固”的缺陷。"
     elif final_prob >= target_threshold:
@@ -210,7 +213,7 @@ def predict():
         prob_ok = model.predict_proba(input_vector)[0, 1]
         is_ng = bool(prob_ok < model_cache['best_threshold'])
         
-        fig = plt.figure(); shap.plots.waterfall(shap.Explanation(values=shap_values[0], base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=model_cache['features']), show=False, max_display=10);
+        fig = plt.figure(); shap.plots.waterfall(shap.Explanation(values=shap_values[0], base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=model_cache['features']), show=False, max_display=10)
         return jsonify({'prob': float(prob_ok), 'is_ng': is_ng, 'threshold': float(model_cache['best_threshold']), 'waterfall_plot': fig_to_base64(fig), 'input_data': data})
     except Exception as e: return jsonify({'error': f'预测失败: {str(e)}'}), 500
 
