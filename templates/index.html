@@ -26,7 +26,7 @@
 </head>
 <body>
     <div class="main-container">
-        <h1>智能玻璃质检系统 (IQCS) - 实时上传训练演示版</h1>
+        <h1>广州百超质检系统 (IQCS) - 实时上传训练演示</h1>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}{% for c, m in messages %}<div class="flash-message flash-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
         {% endwith %}
@@ -136,7 +136,11 @@
                 const adjSection = document.getElementById('adjustment-section');
                 adjSection.innerHTML = '<h3>正在生成调整建议...</h3><div class="spinner" style="display:block;"></div>';
                 try {
-                    const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input_data: payload }) });
+                    const adjPayload = {
+                        input_data: result.input_data,
+                        shap_values: result.shap_values
+                    };
+                    const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adjPayload) });
                     const adjResult = await adjResponse.json();
                     if (!adjResponse.ok) throw new Error(adjResult.error || '获取建议失败');
                     displayAdjustmentResults('adjustment-section', adjResult, result.threshold);
@@ -153,9 +157,9 @@
                     adjustmentsHTML += `<tr>
                         <td>${key}</td>
                         <td>${value.original_value.toFixed(3)}</td>
-                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change.toFixed(3)}</td>
-                        <td>${value.suggested_value.toFixed(3)}</td>
-                        <td style="color:green;">+${(value.prob_contribution*100).toFixed(2)}%</td>
+                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change > 0 ? '+':''}${value.change.toFixed(3)}</td>
+                        <td style="font-weight:bold;">${value.suggested_value.toFixed(3)}</td>
+                        <td style="color:green; font-weight:bold;">+${(value.prob_contribution*100).toFixed(2)}%</td>
                     </tr>`;
                 }
                 adjustmentsHTML += '</table>';
@@ -164,23 +168,9 @@
             el.innerHTML = adjustmentsHTML;
         }
 
-        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', 
-            (form) => {
-                const data = {};
-                new FormData(form).forEach((value, key) => { data[key] = parseFloat(value); });
-                return data;
-            }, displayMonitorResults);
-
-        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', 
-            (form) => ({ product_id: form.product_id.value }), 
-            displayRecommendResults);
-
-        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', 
-            (form) => {
-                const data = {};
-                new FormData(form).forEach((value, key) => { data[key] = parseFloat(value); });
-                return data;
-            }, displayPredictResults);
+        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayMonitorResults);
+        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', (f) => ({ product_id: f.product_id.value }), displayRecommendResults);
+        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayPredictResults);
     </script>
 </body>
 </html>
