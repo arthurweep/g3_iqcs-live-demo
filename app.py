@@ -11,6 +11,8 @@ import shap
 import xgboost as xgb
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'sans-serif']
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -149,8 +151,7 @@ def train():
         clf = xgb.XGBClassifier(
             n_estimators=150, max_depth=5, learning_rate=0.1,
             subsample=0.8, colsample_bytree=0.8, gamma=0.1,
-            random_state=42, use_label_encoder=False,
-            scale_pos_weight=scale_pos_weight_value, eval_metric='logloss'
+            random_state=42, eval_metric='logloss'
         )
         clf.fit(X, y)
         probs_ok = clf.predict_proba(X)[:, 1]
