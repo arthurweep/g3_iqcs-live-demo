@@ -5,39 +5,149 @@
     <title>智能玻璃质检系统 (IQCS)</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f4f7f6; color: #333; margin: 2em;}
+        .main-container { max-width: 1200px; margin: auto; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.07); margin-bottom: 2em; padding: 2em; }
+        .card h2 { margin-top: 0; }
         .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 8px; border: 1px solid transparent; }
         .flash-success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
         .flash-error { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
+        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1em; }
+        input, button { width: 100%; padding: 12px; margin-bottom: 1em; border-radius: 6px; border: 1px solid #ddd; font-size: 1em; box-sizing: border-box; }
+        button { background-color: #007AFF; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007AFF; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .results-box { margin-top: 1em; padding: 1em; background-color: #f8f9fa; border-radius: 8px; min-height: 50px; }
+        .verdict-box { border-left-width: 5px; border-left-style: solid; padding: 1em; margin-top: 1em; border-radius: 4px; }
+        .status-ok { border-left-color: #198754; background-color: #d1e7dd; }
+        .status-warning { border-left-color: #ffc107; background-color: #fff3cd; }
+        .status-ng { border-left-color: #dc3545; background-color: #f8d7da; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: 600; }
     </style>
 </head>
 <body>
-    <h1>智能玻璃质检系统 (IQCS)</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for c, m in messages %}
-          <div class="flash-message flash-{{ c }}">{{ m }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <div>
-        <h2>上传数据并训练模型</h2>
-        <form action="/train" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" required>
-            <button type="submit">上传并开始训练</button>
-        </form>
+    <div class="main-container">
+        <h1>智能玻璃质检系统 (IQCS)</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for c, m in messages %}
+              <div class="flash-message flash-{{ c }}">{{ m }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        <div class="card">
+            <h2>上传数据并训练模型</h2>
+            <form action="/train" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" required>
+                <button type="submit">上传并开始训练</button>
+            </form>
+        </div>
+        {% if model_ready %}
+        <div class="card">
+            <h2>训练结果</h2>
+            <p>文件名: {{ cache.filename }}</p>
+            <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性" style="max-width: 600px;">
+            <table>
+                <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
+                <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
+                <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
+                <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
+            </table>
+        </div>
+        <div class="card">
+            <h2>模块三：AI侦探（缺陷诊断与优化）</h2>
+            <form id="predict-form"><div class="param-grid">
+                {% for feature, name in displayable_params %}
+                    <div>
+                        <label for="{{ feature }}">{{ name }}:</label>
+                        <input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required>
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="submit">开始诊断</button>
+            </form>
+            <div id="predict-spinner" class="spinner"></div>
+            <div id="predict-results" class="results-box"></div>
+        </div>
+        {% endif %}
     </div>
-    {% if model_ready %}
-    <div>
-        <h2>训练结果</h2>
-        <p>文件名: {{ cache.filename }}</p>
-        <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性" style="max-width: 600px;">
-        <table border="1" cellpadding="5">
-            <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
-            <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
-            <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
-            <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
-        </table>
-    </div>
-    {% endif %}
+    <script>
+        document.getElementById('predict-form')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const spinner = document.getElementById('predict-spinner');
+            const resultsDiv = document.getElementById('predict-results');
+            spinner.style.display = 'block';
+            resultsDiv.innerHTML = '';
+            const form = e.target;
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = parseFloat(value);
+            });
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                spinner.style.display = 'none';
+                const result = await response.json();
+                let statusText, statusClass;
+                if (result.status === 'ok') { statusText = '合格 (OK)'; statusClass = 'status-ok'; }
+                else if (result.status === 'warning') { statusText = '过程预警 (Warning)'; statusClass = 'status-warning'; }
+                else { statusText = '不合格 (NG)'; statusClass = 'status-ng'; }
+                let reasonHTML = `<h4>诊断依据</h4><ul>${result.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>`;
+                let html = `<div class="verdict-box ${statusClass}">
+                    <p style="font-weight:bold; font-size: 1.2em;">最终判定: ${statusText}</p>${reasonHTML}
+                </div>
+                <h4>AI模型合格概率</h4>
+                <table>
+                <tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr>
+                <tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr>
+                </table>
+                <h4>根因分析 (SHAP图)</h4>
+                <img src="data:image/png;base64,${result.waterfall_plot}" alt="SHAP Plot" style="max-width: 100%;">`;
+                if (result.status === 'ng') {
+                    html += `<div style="margin-top:1em;"><button id="get-adjustment-btn">获取智能优化建议</button><div id="adjustment-spinner" class="spinner"></div><div id="adjustment-container"></div></div>`;
+                }
+                resultsDiv.innerHTML = html;
+                if (result.status === 'ng') {
+                    document.getElementById('get-adjustment-btn').onclick = async function() {
+                        document.getElementById('adjustment-spinner').style.display = 'block';
+                        try {
+                            const adjPayload = { input_data: result.input_data, shap_values: result.shap_values };
+                            const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adjPayload) });
+                            const adjResult = await adjResponse.json();
+                            let adjustmentsHTML = `<h4>优化思路</h4><p><i>${adjResult.optimization_thought}</i></p>`;
+                            if (Object.keys(adjResult.adjustments).length > 0) {
+                                adjustmentsHTML += '<h4>具体调整建议</h4><table><tr><th>参数</th><th>当前值</th><th>建议调整量</th><th>目标值</th><th>概率提升</th></tr>';
+                                for (const [key, value] of Object.entries(adjResult.adjustments)) {
+                                    adjustmentsHTML += `<tr>
+                                        <td>${adjResult.param_map[key] || key}</td>
+                                        <td>${value.original_value.toFixed(3)}</td>
+                                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change > 0 ? '+' : ''}${value.change.toFixed(3)}</td>
+                                        <td>${value.suggested_value.toFixed(3)}</td>
+                                        <td style="color:green;">+${(value.prob_contribution*100).toFixed(2)}%</td>
+                                    </tr>`;
+                                }
+                                adjustmentsHTML += '</table>';
+                            }
+                            adjustmentsHTML += `<p style="margin-top:1em;"><strong>${adjResult.message}</strong></p>`;
+                            document.getElementById('adjustment-container').innerHTML = adjustmentsHTML;
+                        } catch (error) {
+                            document.getElementById('adjustment-container').innerHTML = `<p style="color: red;">获取调整建议时出错: ${error.message}</p>`;
+                        } finally {
+                            document.getElementById('adjustment-spinner').style.display = 'none';
+                        }
+                    }
+                }
+            } catch (error) {
+                spinner.style.display = 'none';
+                resultsDiv.innerHTML = `<p style="color: red;">错误: ${error.message}</p>`;
+            }
+        });
+    </script>
 </body>
 </html>
