@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>智能玻璃质检系统 (IQCS) - 演示版</title>
+    <title>广州百超玻璃质检系统 (IQCS)</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f4f7f6; color: #333; }
         h1, h2, h3, h4 { color: #0056b3; }
@@ -31,7 +31,7 @@
 </head>
 <body>
     <div class="main-container">
-        <h1>智能玻璃质检系统 (IQCS) - 实时上传训练演示版</h1>
+        <h1>智能玻璃质检系统 (IQCS) - 实时上传训练</h1>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}{% for c, m in messages %}<div class="flash-message flash-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
         {% endwith %}
@@ -62,7 +62,7 @@
             <div class="module">
                 <h2>模块一：产线心电图</h2>
                 <form id="monitor-form"><div class="param-grid">
-                    {% for feature, name in cache.param_map.items() if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
+                    {% for feature, name in displayable_params %}
                         <div><label for="monitor_{{ feature }}">{{ name }}:</label><input type="number" step="any" id="monitor_{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
                     {% endfor %}
                 </div><button type="submit">监控检查</button></form>
@@ -76,7 +76,7 @@
             <div class="module">
                 <h2>模块三：AI侦探</h2>
                 <form id="predict-form"><div class="param-grid">
-                     {% for feature, name in cache.param_map.items() if not any(k in feature for k in ['product_id', 'ratio', 'indicator', 'density']) %}
+                     {% for feature, name in displayable_params %}
                         <div><label for="{{ feature }}">{{ name }}:</label><input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
                      {% endfor %}
                 </div><button type="submit">开始诊断</button></form>
