@@ -1,0 +1,15 @@
+# render.yaml
+services:
+  - type: web
+    name: iqcs-final-demo
+    env: python
+    plan: free # 如果您使用的是免费版
+    buildCommand: |
+      apt-get update && apt-get install -y fonts-wqy-microhei
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app --timeout 300 --workers 1 --log-level info
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9 # 建议使用一个非常稳定的Python版本
+      - key: MPLCONFIGDIR
+        value: /tmp/matplotlib
