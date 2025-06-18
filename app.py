@@ -18,19 +18,23 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# --- 【新增】配置Matplotlib以支持中文显示 ---
+try:
+    # 在Render环境中，我们通过requirements.txt安装了wqy-microhei字体库
+    # 这里我们设置Matplotlib使用该字体
+    plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei']
+    # 解决负号'-'显示为方块的问题
+    plt.rcParams['axes.unicode_minus'] = False 
+    app.logger.info("成功设置中文字体为 'WenQuanYi Micro Hei'。")
+except Exception as e:
+    app.logger.warning(f"设置中文字体失败: {e}。图表中的中文可能无法正常显示。")
+
 # 参数中英文映射表
 PARAM_MAP = {
-    "product_id": "产品ID",
-    "F_cut_act": "刀头实际压力 (N)",
-    "v_cut_act": "切割实际速度 (mm/s)",
-    "F_break_peak": "崩边力峰值 (N)",
-    "v_wheel_act": "磨轮线速度 (m/s)",
-    "F_wheel_act": "磨轮压紧力 (N)",
-    "P_cool_act": "冷却水压力 (bar)",
-    "t_glass_meas": "玻璃厚度 (mm)",
-    "pressure_speed_ratio": "压速比",
-    "stress_indicator": "应力指标",
-    "energy_density": "能量密度"
+    "product_id": "产品ID", "F_cut_act": "刀头实际压力 (N)", "v_cut_act": "切割实际速度 (mm/s)",
+    "F_break_peak": "崩边力峰值 (N)", "v_wheel_act": "磨轮线速度 (m/s)", "F_wheel_act": "磨轮压紧力 (N)",
+    "P_cool_act": "冷却水压力 (bar)", "t_glass_meas": "玻璃厚度 (mm)", "pressure_speed_ratio": "压速比",
+    "stress_indicator": "应力指标", "energy_density": "能量密度"
 }
 
 # 全局变量来缓存模型和相关产物
@@ -38,14 +42,12 @@ model_cache = {}
 
 # --- 辅助函数 ---
 def fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches='tight'); plt.close(fig)
+    buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches='tight'); plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
 # --- 参数调整建议的核心算法 ---
 def calculate_adjustment_suggestions_v2(clf, current_params, feature_names, shap_values, target_threshold, golden_baseline):
     app.logger.info(f"开始为NG样本计算调整建议 (V2)... 目标合格概率: > {target_threshold:.4f}")
-    
     current_df = pd.DataFrame([current_params])
     current_df['pressure_speed_ratio'] = current_df['F_cut_act'] / current_df['v_cut_act']
     current_df['stress_indicator'] = current_df['F_break_peak'] / current_df['t_glass_meas']
@@ -56,7 +58,6 @@ def calculate_adjustment_suggestions_v2(clf, current_params, feature_names, shap
 
     if initial_prob >= target_threshold: return {}, initial_prob, "样本当前预测已合格，无需调整。"
 
-    # 策略1: 优先修正超出黄金基线的参数
     params_out_of_baseline = []
     for i, feature in enumerate(feature_names):
         if not any(k in feature for k in ['ratio', 'indicator', 'density']):
@@ -73,7 +74,6 @@ def calculate_adjustment_suggestions_v2(clf, current_params, feature_names, shap
         message = f"优先修正超出基线的参数 '{PARAM_MAP.get(param_to_fix['name'])}'。"
         return adjustments, 1.0, message
 
-    # 策略2: 根据SHAP值进行调整
     shap_impact = sorted([(feature_names[i], shap_values[i]) for i in range(len(shap_values))], key=lambda x: x[1])
     for feature_name, impact in shap_impact:
         if impact < 0 and not any(k in feature_name for k in ['ratio', 'indicator', 'density']):
@@ -84,10 +84,7 @@ def calculate_adjustment_suggestions_v2(clf, current_params, feature_names, shap
                 temp_values = current_values_array.copy()
                 change = original_val * step_ratio if original_val != 0 else 0.1 * step_ratio
                 temp_values[idx] += change
-                temp_df = pd.DataFrame([temp_values], columns=feature_names)
-                temp_df['pressure_speed_ratio'] = temp_df['F_cut_act'] / temp_df['v_cut_act']
-                temp_df['stress_indicator'] = temp_df['F_break_peak'] / temp_df['t_glass_meas']
-                temp_df['energy_density'] = temp_df['F_cut_act'] * temp_df['v_cut_act']
+                temp_df = pd.DataFrame([temp_values], columns=feature_names); temp_df['pressure_speed_ratio'] = temp_df['F_cut_act'] / temp_df['v_cut_act']; temp_df['stress_indicator'] = temp_df['F_break_peak'] / temp_df['t_glass_meas']; temp_df['energy_density'] = temp_df['F_cut_act'] * temp_df['v_cut_act']
                 temp_df.replace([np.inf, -np.inf], np.nan, inplace=True); temp_df = temp_df.fillna(model_cache.get('feature_defaults', {}))
                 new_prob = clf.predict_proba(temp_df.values)[0, 1]
                 if new_prob > max_prob: max_prob, best_new_val = new_prob, temp_values[idx]
@@ -100,15 +97,10 @@ def calculate_adjustment_suggestions_v2(clf, current_params, feature_names, shap
 # --- 路由与功能 ---
 @app.route('/', methods=['GET'])
 def index():
-    # 【BUG修复】在这里预处理模板需要的数据
     model_ready = bool(model_cache.get('is_ready', False))
     displayable_params = []
     if model_ready and 'param_map' in model_cache:
-        # 过滤掉不希望用户在表单中看到的参数
-        displayable_params = [
-            (k, v) for k, v in model_cache['param_map'].items() 
-            if not any(x in k for x in ['product_id', 'ratio', 'indicator', 'density'])
-        ]
+        displayable_params = [(k, v) for k, v in model_cache['param_map'].items() if not any(x in k for x in ['product_id', 'ratio', 'indicator', 'density'])]
     return render_template('index.html', model_ready=model_ready, cache=model_cache, displayable_params=displayable_params)
 
 @app.route('/train', methods=['POST'])
@@ -124,9 +116,7 @@ def train():
         df['stress_indicator'] = df['F_break_peak'] / df['t_glass_meas']
         df['energy_density'] = df['F_cut_act'] * df['v_cut_act']
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        
         features_to_use = [f for f in PARAM_MAP.keys() if f != "product_id"]
-        
         X = df[features_to_use].copy(); y = df["OK_NG"]; X = X.fillna(X.mean())
         count_ok, count_ng = y.value_counts().get(1, 0), y.value_counts().get(0, 0)
         scale_pos_weight_value = count_ok / count_ng if count_ng > 0 else 1
@@ -138,10 +128,7 @@ def train():
             f1 = f1_score(y, (probs_ok >= t).astype(int), average='macro', zero_division=0)
             if f1 > best_f1_macro: best_f1_macro, best_thresh = f1, t
         
-        clf.get_booster().feature_names = [PARAM_MAP.get(f, f) for f in features_to_use]
         fig_importance = plt.figure(); xgb.plot_importance(clf, max_num_features=10, ax=plt.gca()); plt.tight_layout()
-        clf.get_booster().feature_names = None
-        
         y_pred_final = (probs_ok >= best_thresh).astype(int)
         metrics = {'accuracy': accuracy_score(y, y_pred_final), 'recall_ng': recall_score(y, y_pred_final, pos_label=0), 'precision_ng': precision_score(y, y_pred_final, pos_label=0), 'f1_ng': f1_score(y, y_pred_final, pos_label=0)}
         
