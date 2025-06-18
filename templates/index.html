@@ -1,262 +1,296 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>智能玻璃质检系统 (IQCS)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', Arial, sans-serif;
-            background: #f7f8fa;
-            margin: 0; padding: 0;
-            color: #222;
-        }
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
-            background: #fff;
-            border-radius: 18px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
-            padding: 32px 40px 40px 40px;
-        }
-        h1, h2, h3 {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        h1 { font-size: 2.1rem; margin-bottom: 0.5em;}
-        h2 { font-size: 1.3rem; margin-top: 2em;}
-        .section {
-            margin-bottom: 32px;
-            padding-bottom: 18px;
-            border-bottom: 1px solid #ececec;
-        }
-        .card {
-            background: #f4f6fb;
-            border-radius: 12px;
-            padding: 22px 26px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        }
-        .metrics-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        .metrics-table th, .metrics-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e0e0e0;
-            text-align: left;
-        }
-        .metrics-table th {
-            background: #f0f2f5;
-            color: #555;
-        }
-        .btn {
-            background: #007aff;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 22px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-right: 10px;
-        }
-        .btn:hover {
-            background: #005ecb;
-        }
-        .status-ok { color: #2ecc40; font-weight: 600;}
-        .status-ng { color: #e74c3c; font-weight: 600;}
-        .status-warning { color: #f39c12; font-weight: 600;}
-        .divider {
-            height: 1px;
-            background: #ececec;
-            margin: 32px 0;
-        }
-        .shap-img {
-            max-width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            margin-top: 12px;
-        }
-        .verdict-list { margin: 0 0 10px 0; padding-left: 22px;}
-        .verdict-list li { margin-bottom: 4px;}
-        @media (max-width: 600px) {
-            .container { padding: 12px; }
-            .card { padding: 10px; }
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>广州福耀玻璃AI质检系统 - 生产线监控</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<style>
+  html, body {
+    height: 100%;
+    margin: 0; padding: 0;
+    background: #121212;
+    color: #eee;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+  }
+  .header {
+    height: 60px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: #0af;
+    user-select: none;
+    position: relative;
+  }
+  .header .status {
+    margin-left: auto;
+    font-weight: 800;
+    font-size: 1.1rem;
+    padding: 6px 14px;
+    border-radius: 12px;
+    color: white;
+  }
+  .status-ok {
+    background-color: #28a745;
+  }
+  .status-warning {
+    background-color: #fd7e14;
+    animation: blink 1.5s infinite;
+  }
+  .status-ng {
+    background-color: #dc3545;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0%, 100% {opacity: 1;}
+    50% {opacity: 0.4;}
+  }
+  .container-fluid {
+    height: calc(100% - 60px);
+    display: flex;
+    padding: 0;
+  }
+  .left-panel {
+    width: 30%;
+    background: #1c1c1c;
+    overflow-y: auto;
+    padding: 20px;
+    border-right: 2px solid #0af;
+  }
+  .right-panel {
+    flex-grow: 1;
+    background: #181818;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  h2.section-title {
+    color: #0af;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  .param-item {
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: #222;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+  }
+  .param-item.ok {
+    color: #28a745;
+  }
+  .param-item.warning {
+    background: #ff8c00;
+    color: #fff;
+    font-weight: 700;
+  }
+  .param-item.ng {
+    background: #dc3545;
+    color: #fff;
+    font-weight: 700;
+  }
+  .btn-primary {
+    border-radius: 8px;
+    font-weight: 700;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+  }
+  .form-label {
+    font-weight: 600;
+  }
+  .shap-img {
+    max-width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 0 20px #0af;
+    margin-top: 20px;
+  }
+  .diagnosis {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .diagnosis.ok {
+    color: #28a745;
+  }
+  .diagnosis.warning {
+    color: #fd7e14;
+  }
+  .diagnosis.ng {
+    color: #dc3545;
+  }
+  .scrollable-form {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+</style>
 </head>
 <body>
-<div class="container">
-    <h1>智能玻璃质检系统 (IQCS)</h1>
 
-    <!-- 消息提示 -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div>
-          {% for c, m in messages %}
-            <div class="card" style="color: {% if c=='success' %}#2ecc40{% elif c=='error' %}#e74c3c{% else %}#555{% endif %};">
-              {{ m }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <!-- 上传表单始终可见 -->
-    <div class="section">
-        <h2>步骤一：上传数据并训练AI模型</h2>
-        <form method="post" action="/train" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".csv" required>
-            <button class="btn" type="submit">上传并训练</button>
-        </form>
-        {% if model_ready %}
-            <div style="margin-top: 10px; color: #888;">已上传文件: <strong>{{ cache.filename }}</strong></div>
-        {% endif %}
-    </div>
-
-    {% if model_ready %}
-        <div class="section">
-            <h2>训练结果概览</h2>
-            <div class="card">
-                <h3>模型性能指标</h3>
-                <table class="metrics-table">
-                    <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
-                    <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
-                    <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
-                    <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
-                </table>
-            </div>
-            <div class="card">
-                <h3>特征重要性</h3>
-                <img src="data:image/png;base64,{{ cache.feature_plot }}" class="shap-img" alt="特征重要性">
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="section">
-            <h2>模块一：产线心电图</h2>
-            <!-- 产线心电图交互区（略，可补充） -->
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="section">
-            <h2>模块二：AI工艺员</h2>
-            <!-- AI工艺员交互区（略，可补充） -->
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="section" id="ai-detective">
-            <h2>模块三：AI侦探</h2>
-            <div class="card">
-                <form id="predict-form">
-                    <h3>输入参数检测</h3>
-                    {% for k, v in displayable_params %}
-                      <div style="margin-bottom: 8px;">
-                        <label>{{ v }}：</label>
-                        <input type="number" step="any" name="{{ k }}" required style="width: 120px; padding: 4px 8px;">
-                      </div>
-                    {% endfor %}
-                    <button class="btn" type="submit">检测</button>
-                </form>
-            </div>
-            <div id="predict-result" style="margin-top: 20px;"></div>
-            <div id="adjustment-result" style="margin-top: 20px;"></div>
-        </div>
-    {% else %}
-        <div class="card" style="margin-top: 32px;">
-            <h3>系统尚未训练</h3>
-            <div style="color: #888;">请先上传数据文件以激活全部功能。</div>
-        </div>
-    {% endif %}
+<div class="header">
+  福耀玻璃智能质检系统
+  <div id="system-status" class="status status-ok">状态：正常</div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const predictForm = document.getElementById('predict-form');
-    const predictResult = document.getElementById('predict-result');
-    const adjustmentResult = document.getElementById('adjustment-result');
-    let lastPredictData = null;
 
-    if (predictForm) {
-        predictForm.onsubmit = function(e) {
-            e.preventDefault();
-            predictResult.innerHTML = "检测中...";
-            adjustmentResult.innerHTML = "";
-            const formData = new FormData(predictForm);
-            let data = {};
-            formData.forEach((v, k) => data[k] = parseFloat(v));
-            fetch('/api/predict', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            }).then(r => r.json()).then(res => {
-                if (res.error) {
-                    predictResult.innerHTML = `<div class="status-ng">${res.error}</div>`;
-                    return;
-                }
-                lastPredictData = res;
-                let statusHtml = '';
-                if (res.status === 'ok') statusHtml = '<span class="status-ok">合格</span>';
-                else if (res.status === 'ng') statusHtml = '<span class="status-ng">不合格</span>';
-                else statusHtml = '<span class="status-warning">预警</span>';
-                let verdictHtml = '<ul class="verdict-list">';
-                (res.verdict_reason || []).forEach(x => verdictHtml += `<li>${x}</li>`);
-                verdictHtml += '</ul>';
-                let shapHtml = res.waterfall_plot ? `<img src="data:image/png;base64,${res.waterfall_plot}" class="shap-img">` : '';
-                let optimizeBtn = '';
-                if (res.can_optimize) {
-                    optimizeBtn = `<button class="btn" id="do-optimize-btn">需要优化吗？</button>`;
-                }
-                predictResult.innerHTML = `
-                    <div>
-                        <div>检测结果：${statusHtml}</div>
-                        <div>合格概率：${(res.prob*100).toFixed(2)}%</div>
-                        <div>${verdictHtml}</div>
-                        ${shapHtml}
-                        ${optimizeBtn}
-                    </div>
-                `;
-                if (res.can_optimize) {
-                    document.getElementById('do-optimize-btn').onclick = function() {
-                        predictResult.innerHTML += '<div style="margin-top:8px;">优化中...</div>';
-                        fetch('/api/adjust', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                input_data: res.input_data,
-                                shap_values: res.shap_values
-                            })
-                        }).then(r => r.json()).then(adj => {
-                            if (adj.error) {
-                                adjustmentResult.innerHTML = `<div class="status-ng">${adj.error}</div>`;
-                                return;
-                            }
-                            let adjHtml = '<div class="card"><h3>参数优化建议</h3>';
-                            if (Object.keys(adj.adjustments).length > 0) {
-                                for (let k in adj.adjustments) {
-                                    let a = adj.adjustments[k];
-                                    adjHtml += `<div>参数 <b>${res.param_map[k]}</b>：原值 <span style="color:#e67e22">${a.original_value}</span> → 建议 <span style="color:#007aff">${a.suggested_value}</span>，提升概率 ${(a.prob_contribution*100).toFixed(2)}%</div>`;
-                                }
-                                adjHtml += `<div style="margin-top:8px;">${adj.message}</div>`;
-                            } else {
-                                adjHtml += `<div>${adj.message}</div>`;
-                            }
-                            adjHtml += '</div>';
-                            adjustmentResult.innerHTML = adjHtml;
-                        });
-                    }
-                } else {
-                    adjustmentResult.innerHTML = '';
-                }
-            });
-        }
+<div class="container-fluid">
+  <!-- 左侧参数监控 -->
+  <div class="left-panel">
+    <h2 class="section-title">关键参数实时监控</h2>
+    <div id="param-list">
+      <!-- 参数项动态填充 -->
+    </div>
+  </div>
+
+  <!-- 右侧检测与诊断 -->
+  <div class="right-panel">
+    <h2 class="section-title">AI侦探 - 缺陷诊断与优化</h2>
+    {% if not model_ready %}
+    <div class="alert alert-warning text-dark">请先上传并训练模型以启用诊断功能。</div>
+    {% else %}
+    <form id="predict-form" class="scrollable-form">
+      <div class="row g-3">
+        {% for k, v in displayable_params %}
+        <div class="col-6 col-md-4">
+          <label for="{{ k }}" class="form-label">{{ v }}</label>
+          <input type="number" step="any" class="form-control" id="{{ k }}" name="{{ k }}" required />
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary">开始检测</button>
+      </div>
+    </form>
+    <div id="predict-result" class="diagnosis mt-4"></div>
+    <img id="shap-plot" class="shap-img d-none" alt="SHAP瀑布图" />
+    <button id="optimize-btn" class="btn btn-warning mt-3 d-none">需要优化建议？</button>
+    <div id="adjustment-result" class="diagnosis mt-3"></div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const paramListEl = document.getElementById('param-list');
+  const systemStatusEl = document.getElementById('system-status');
+  const predictForm = document.getElementById('predict-form');
+  const predictResult = document.getElementById('predict-result');
+  const shapPlot = document.getElementById('shap-plot');
+  const optimizeBtn = document.getElementById('optimize-btn');
+  const adjustmentResult = document.getElementById('adjustment-result');
+
+  // TODO: 实际项目中请替换为后端接口实时拉取参数状态数据
+  const exampleParams = [
+    { name: "刀头实际压力", key: "F_cut_act", value: 50, status: "ok" },
+    { name: "切割实际速度", key: "v_cut_act", value: 120, status: "warning" },
+    { name: "崩边力峰值", key: "F_break_peak", value: 80, status: "ng" },
+    { name: "磨轮线速度", key: "v_wheel_act", value: 200, status: "ok" },
+    { name: "磨轮压紧力", key: "F_wheel_act", value: 30, status: "ok" }
+  ];
+
+  function renderParams(params) {
+    paramListEl.innerHTML = '';
+    params.forEach(p => {
+      const div = document.createElement('div');
+      div.className = `param-item ${p.status}`;
+      div.textContent = `${p.name}: ${p.value}`;
+      paramListEl.appendChild(div);
+    });
+  }
+
+  renderParams(exampleParams);
+
+  function updateSystemStatus() {
+    const hasNG = exampleParams.some(p => p.status === 'ng');
+    const hasWarning = exampleParams.some(p => p.status === 'warning');
+    if (hasNG) {
+      systemStatusEl.textContent = '状态：异常';
+      systemStatusEl.className = 'status status-ng';
+    } else if (hasWarning) {
+      systemStatusEl.textContent = '状态：预警';
+      systemStatusEl.className = 'status status-warning';
+    } else {
+      systemStatusEl.textContent = '状态：正常';
+      systemStatusEl.className = 'status status-ok';
     }
-});
+  }
+
+  updateSystemStatus();
+
+  if (predictForm) {
+    predictForm.onsubmit = function(e) {
+      e.preventDefault();
+      predictResult.textContent = '检测中，请稍候...';
+      adjustmentResult.textContent = '';
+      shapPlot.classList.add('d-none');
+      optimizeBtn.classList.add('d-none');
+
+      const formData = new FormData(predictForm);
+      let data = {};
+      formData.forEach((v, k) => data[k] = parseFloat(v));
+
+      fetch('/api/predict', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      }).then(res => res.json()).then(res => {
+        if (res.error) {
+          predictResult.textContent = res.error;
+          return;
+        }
+
+        predictResult.className = 'diagnosis mt-4';
+        predictResult.innerHTML = `
+          <div><strong>检测结果：</strong> ${res.status === 'ok' ? '合格' : (res.status === 'ng' ? '不合格' : '预警')}</div>
+          <div><strong>合格概率：</strong> ${(res.prob*100).toFixed(2)}%</div>
+          <ul>${res.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>
+        `;
+
+        if (res.status === 'ok') predictResult.classList.add('ok');
+        else if (res.status === 'warning') predictResult.classList.add('warning');
+        else predictResult.classList.add('ng');
+
+        if (res.waterfall_plot) {
+          shapPlot.src = "data:image/png;base64," + res.waterfall_plot;
+          shapPlot.classList.remove('d-none');
+        }
+
+        if (res.can_optimize) {
+          optimizeBtn.classList.remove('d-none');
+          optimizeBtn.onclick = () => {
+            adjustmentResult.textContent = '优化建议生成中...';
+            fetch('/api/adjust', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                input_data: res.input_data,
+                shap_values: res.shap_values
+              })
+            }).then(r => r.json()).then(adj => {
+              if (adj.error) {
+                adjustmentResult.textContent = adj.error;
+                return;
+              }
+              adjustmentResult.innerHTML = '<strong>参数优化建议：</strong><br/>' +
+                Object.entries(adj.adjustments).map(([k, v]) => 
+                  `${res.param_map[k]}: 原值 ${v.original_value} → 建议 ${v.suggested_value}，提升概率 ${(v.prob_contribution*100).toFixed(2)}%`
+                ).join('<br/>') + `<br/><br/>${adj.message}`;
+            });
+          };
+        } else {
+          optimizeBtn.classList.add('d-none');
+          adjustmentResult.textContent = '';
+        }
+      });
+    };
+  }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
