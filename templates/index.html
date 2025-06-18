@@ -1,154 +1,212 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <title>福耀玻璃智能质检系统</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-        html, body { height: 100%; margin: 0; padding: 0; background: #15181b; color: #eee; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
-        .header { height: 64px; background: #181f27; display: flex; align-items: center; padding: 0 32px; font-weight: 700; font-size: 1.5rem; color: #19aaff; }
-        .header .status { margin-left: auto; font-weight: 800; font-size: 1.1rem; padding: 7px 18px; border-radius: 14px; color: white; }
-        .status-ok { background: #28a745; }
-        .status-warning { background: #fd7e14; animation: blink 1.5s infinite; }
-        .status-ng { background: #dc3545; animation: blink 1s infinite; }
-        @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0.4;} }
-        .main-flex { display: flex; flex-direction: row; height: calc(100vh - 64px); }
-        .side-panel { width: 300px; background: #1c232b; padding: 28px 18px 18px 18px; border-right: 2px solid #19aaff; }
-        .main-panel { flex: 1; padding: 28px 32px 18px 32px; overflow-y: auto; }
-        .card { background: #232a31; border-radius: 14px; box-shadow: 0 2px 24px #0006; margin-bottom: 28px; }
-        .card-title { color: #19aaff; font-weight: 700; font-size: 1.25rem; margin-bottom: 1rem; }
-        .param-list .param-item { padding: 10px 14px; margin-bottom: 10px; border-radius: 8px; background: #232a31; display: flex; justify-content: space-between; font-size: 1.1rem; }
-        .param-item.ok { color: #28a745; }
-        .param-item.warning { background: #ff8c00; color: #fff; font-weight: 700; }
-        .param-item.ng { background: #dc3545; color: #fff; font-weight: 700; }
-        .shap-img { max-width: 100%; border-radius: 12px; box-shadow: 0 0 20px #19aaff; margin-top: 20px; }
-        .diagnosis { font-size: 1.15rem; font-weight: 700; }
-        .diagnosis.ok { color: #28a745; }
-        .diagnosis.warning { color: #fd7e14; }
-        .diagnosis.ng { color: #dc3545; }
-        .section-row { display: flex; gap: 32px; }
-        .section-col { flex: 1; min-width: 350px; }
-        .alert { color: #222; }
-        @media (max-width: 1100px) {
-            .section-row { flex-direction: column; gap: 0; }
-            .main-panel { padding: 14px 8px; }
-        }
-        @media (max-width: 700px) {
-            .main-flex { flex-direction: column; }
-            .side-panel { width: 100%; border-right: none; border-bottom: 2px solid #19aaff; }
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>福耀玻璃智能质检系统</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<style>
+  html, body {
+    height: 100%; margin: 0; padding: 0;
+    background: #121212;
+    color: #eee;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .header {
+    height: 60px; background: #1a1a1a;
+    display: flex; align-items: center; padding: 0 30px;
+    font-weight: 700; font-size: 1.6rem; color: #0af;
+    user-select: none;
+  }
+  .header .status {
+    margin-left: auto;
+    font-weight: 800; font-size: 1.1rem;
+    padding: 6px 18px; border-radius: 14px;
+    color: white;
+  }
+  .status-ok { background-color: #28a745; }
+  .status-warning { background-color: #fd7e14; animation: blink 1.5s infinite; }
+  .status-ng { background-color: #dc3545; animation: blink 1s infinite; }
+  @keyframes blink {
+    0%, 100% {opacity: 1;}
+    50% {opacity: 0.4;}
+  }
+  .container-fluid {
+    display: flex; height: calc(100vh - 60px);
+    padding: 0; overflow: hidden;
+  }
+  .side-panel {
+    width: 320px; background: #1f1f1f;
+    padding: 24px 20px; border-right: 3px solid #0af;
+    overflow-y: auto;
+  }
+  .main-panel {
+    flex-grow: 1; background: #181818;
+    padding: 24px 32px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 30px;
+  }
+  h2.section-title {
+    color: #0af; font-weight: 700; margin-bottom: 1rem;
+  }
+  .param-list .param-item {
+    padding: 12px 16px; margin-bottom: 10px;
+    border-radius: 10px; background: #222;
+    display: flex; justify-content: space-between;
+    font-size: 1.15rem;
+  }
+  .param-item.ok { color: #28a745; }
+  .param-item.warning { background: #ff8c00; color: #fff; font-weight: 700; }
+  .param-item.ng { background: #dc3545; color: #fff; font-weight: 700; }
+  .card {
+    background: #222; border-radius: 14px;
+    box-shadow: 0 0 20px #000a; padding: 24px;
+  }
+  .btn-primary, .btn-warning {
+    border-radius: 8px; font-weight: 700; padding: 10px 22px; font-size: 1.1rem;
+  }
+  label {
+    font-weight: 600; color: #ddd;
+  }
+  input.form-control {
+    background: #2a2a2a; border: none; color: #eee;
+  }
+  input.form-control::placeholder {
+    color: #666;
+  }
+  .shap-img {
+    max-width: 100%; border-radius: 14px;
+    box-shadow: 0 0 24px #0af;
+    margin-top: 20px;
+  }
+  .diagnosis {
+    font-size: 1.2rem; font-weight: 700;
+  }
+  .diagnosis.ok { color: #28a745; }
+  .diagnosis.warning { color: #fd7e14; }
+  .diagnosis.ng { color: #dc3545; }
+  .scrollable-form {
+    max-height: 320px; overflow-y: auto;
+  }
+  .alert {
+    color: #222;
+  }
+  /* 响应式 */
+  @media (max-width: 900px) {
+    .container-fluid { flex-direction: column; }
+    .side-panel { width: 100%; border-right: none; border-bottom: 3px solid #0af; }
+    .main-panel { padding: 16px; }
+  }
+</style>
 </head>
 <body>
 <div class="header">
-    福耀玻璃智能质检系统
-    <div id="system-status" class="status status-ok">状态：正常</div>
+  福耀玻璃智能质检系统
+  <div id="system-status" class="status status-ok">状态：正常</div>
 </div>
-<div class="main-flex">
-    <!-- 侧边栏：参数监控+上传 -->
-    <div class="side-panel">
-        <div class="card mb-4">
-            <div class="card-title">关键参数实时监控</div>
-            <div id="param-list" class="param-list">
-                <!-- 动态填充参数项 -->
-            </div>
+<div class="container-fluid">
+  <!-- 左侧：参数监控 + 上传训练 -->
+  <div class="side-panel">
+    <div class="card mb-4">
+      <h2 class="section-title">关键参数实时监控</h2>
+      <div id="param-list" class="param-list"></div>
+    </div>
+    <div class="card">
+      <h2 class="section-title" style="font-size:1.1rem;">上传训练数据</h2>
+      <form method="post" action="/train" enctype="multipart/form-data" class="mb-2">
+        <input type="file" name="file" accept=".csv" required class="form-control form-control-sm mb-2" />
+        <button type="submit" class="btn btn-primary btn-sm w-100">上传并训练</button>
+      </form>
+      {% if model_ready %}
+        <div class="text-muted" style="font-size:0.95rem;">已上传文件: <strong>{{ cache.filename }}</strong></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 右侧主区：功能模块 -->
+  <div class="main-panel">
+    <!-- AI侦探 -->
+    <div class="card">
+      <h2 class="section-title">AI侦探 - 缺陷诊断与优化</h2>
+      {% if not model_ready %}
+        <div class="alert alert-warning">请先上传并训练模型以启用诊断功能。</div>
+      {% else %}
+      <form id="predict-form" class="scrollable-form">
+        <div class="row g-3">
+          {% for k, v in displayable_params %}
+          <div class="col-6 col-md-4">
+            <label for="{{ k }}" class="form-label">{{ v }}</label>
+            <input type="number" step="any" class="form-control" id="{{ k }}" name="{{ k }}" required
+              value="{{ initial_values.get(k, '') }}" />
+          </div>
+          {% endfor %}
         </div>
-        <div class="card">
-            <div class="card-title" style="font-size:1.1rem;">上传训练数据</div>
-            <form method="post" action="/train" enctype="multipart/form-data" class="mb-2">
-                <input type="file" name="file" accept=".csv" required class="form-control form-control-sm mb-2" />
-                <button type="submit" class="btn btn-primary btn-sm">上传并训练</button>
-            </form>
-            {% if model_ready %}
-              <div class="text-muted" style="font-size:0.95rem;">已上传文件: <strong>{{ cache.filename }}</strong></div>
-            {% endif %}
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary">开始检测</button>
         </div>
+      </form>
+      <div id="predict-result" class="diagnosis mt-4"></div>
+      <img id="shap-plot" class="shap-img d-none" alt="SHAP瀑布图" />
+      <button id="optimize-btn" class="btn btn-warning mt-3 d-none">是否需要优化建议？</button>
+      <div id="adjustment-result" class="diagnosis mt-3"></div>
+      {% endif %}
     </div>
 
-    <!-- 主区：所有功能模块并列展示 -->
-    <div class="main-panel">
-        <div class="section-row">
-            <!-- AI侦探 -->
-            <div class="section-col">
-                <div class="card p-3">
-                    <div class="card-title">AI侦探 - 缺陷诊断与优化</div>
-                    {% if not model_ready %}
-                    <div class="alert alert-warning">请先上传并训练模型以启用诊断功能。</div>
-                    {% else %}
-                    <form id="predict-form" class="mb-3">
-                        <div class="row g-3">
-                            {% for k, v in displayable_params %}
-                            <div class="col-6">
-                                <label for="{{ k }}" class="form-label">{{ v }}</label>
-                                <input type="number" step="any" class="form-control" id="{{ k }}" name="{{ k }}" required />
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="mt-3">
-                            <button type="submit" class="btn btn-primary">开始检测</button>
-                        </div>
-                    </form>
-                    <div id="predict-result" class="diagnosis mt-4"></div>
-                    <img id="shap-plot" class="shap-img d-none" alt="SHAP瀑布图" />
-                    <button id="optimize-btn" class="btn btn-warning mt-3 d-none">需要优化建议？</button>
-                    <div id="adjustment-result" class="diagnosis mt-3"></div>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- 产线心电图 -->
-            <div class="section-col">
-                <div class="card p-3">
-                    <div class="card-title">产线心电图（实时参数监控）</div>
-                    <!-- 填入您的产线心电图功能模块内容或表单 -->
-                    <div class="alert alert-secondary">此处可集成实时工艺参数趋势图、报警记录等。</div>
-                </div>
-            </div>
+    <!-- AI工艺员 -->
+    <div class="card">
+      <h2 class="section-title">AI工艺员（新品参数推荐）</h2>
+      <form id="recommend-form" class="mb-3">
+        <div class="row g-3 align-items-end">
+          <div class="col-8 col-md-6">
+            <label for="product_id" class="form-label">新品名称 / 产品ID</label>
+            <input type="text" id="product_id" name="product_id" class="form-control" placeholder="请输入新品名称或ID" required />
+          </div>
+          <div class="col-4 col-md-2">
+            <button type="submit" class="btn btn-primary w-100">获取推荐</button>
+          </div>
         </div>
-        <div class="section-row">
-            <!-- AI工艺员 -->
-            <div class="section-col">
-                <div class="card p-3">
-                    <div class="card-title">AI工艺员（新品参数推荐）</div>
-                    <!-- 填入您的AI工艺员功能模块内容或表单 -->
-                    <div class="alert alert-secondary">此处可集成新品参数推荐、工艺知识库等。</div>
-                </div>
-            </div>
-            <!-- 模型训练结果 -->
-            <div class="section-col">
-                <div class="card p-3">
-                    <div class="card-title">模型训练结果</div>
-                    {% if model_ready %}
-                    <table class="table table-dark table-bordered w-auto mb-3">
-                        <tbody>
-                            <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
-                            <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
-                            <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
-                            <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
-                        </tbody>
-                    </table>
-                    <h5>特征重要性</h5>
-                    <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性" class="shap-img" />
-                    {% else %}
-                    <div class="alert alert-info">暂无训练结果，请先上传数据。</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+      </form>
+      <div id="recommend-result"></div>
     </div>
+
+    <!-- 模型训练结果 -->
+    <div class="card">
+      <h2 class="section-title">模型训练结果</h2>
+      {% if model_ready %}
+      <table class="table table-dark table-bordered w-auto mb-3">
+        <tbody>
+          <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
+          <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
+          <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
+          <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
+        </tbody>
+      </table>
+      <h5>特征重要性</h5>
+      <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性" class="shap-img" />
+      {% else %}
+      <div class="alert alert-info">暂无训练结果，请先上传数据。</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // 参数监控示例（实际请用后端接口填充）
+  // 示例初始参数，方便演示调试
+  const initialValues = {{ initial_values | tojson | safe }};
   const paramListEl = document.getElementById('param-list');
   const systemStatusEl = document.getElementById('system-status');
-  const exampleParams = [
-    { name: "刀头实际压力", key: "F_cut_act", value: 50, status: "ok" },
-    { name: "切割实际速度", key: "v_cut_act", value: 120, status: "warning" },
-    { name: "崩边力峰值", key: "F_break_peak", value: 80, status: "ng" },
-    { name: "磨轮线速度", key: "v_wheel_act", value: 200, status: "ok" },
-    { name: "磨轮压紧力", key: "F_wheel_act", value: 30, status: "ok" }
+
+  // 模拟实时参数监控数据，实际请用后端接口替换
+  let exampleParams = [
+    { name: "刀头实际压力", key: "F_cut_act", value: initialValues.F_cut_act || 50, status: "ok" },
+    { name: "切割实际速度", key: "v_cut_act", value: initialValues.v_cut_act || 120, status: "ok" },
+    { name: "崩边力峰值", key: "F_break_peak", value: initialValues.F_break_peak || 80, status: "ok" },
+    { name: "磨轮线速度", key: "v_wheel_act", value: initialValues.v_wheel_act || 200, status: "ok" },
+    { name: "磨轮压紧力", key: "F_wheel_act", value: initialValues.F_wheel_act || 30, status: "ok" },
+    { name: "冷却水压力", key: "P_cool_act", value: initialValues.P_cool_act || 5, status: "ok" },
+    { name: "玻璃厚度", key: "t_glass_meas", value: initialValues.t_glass_meas || 4, status: "ok" }
   ];
+
   function renderParams(params) {
     paramListEl.innerHTML = '';
     params.forEach(p => {
@@ -159,6 +217,7 @@
     });
   }
   renderParams(exampleParams);
+
   function updateSystemStatus() {
     const hasNG = exampleParams.some(p => p.status === 'ng');
     const hasWarning = exampleParams.some(p => p.status === 'warning');
@@ -175,12 +234,13 @@
   }
   updateSystemStatus();
 
-  // 下面保持您的AI侦探等原有JS逻辑不变
+  // AI侦探交互逻辑
   const predictForm = document.getElementById('predict-form');
   const predictResult = document.getElementById('predict-result');
   const shapPlot = document.getElementById('shap-plot');
   const optimizeBtn = document.getElementById('optimize-btn');
   const adjustmentResult = document.getElementById('adjustment-result');
+
   if (predictForm) {
     predictForm.onsubmit = function(e) {
       e.preventDefault();
@@ -188,9 +248,11 @@
       adjustmentResult.textContent = '';
       shapPlot.classList.add('d-none');
       optimizeBtn.classList.add('d-none');
+
       const formData = new FormData(predictForm);
       let data = {};
       formData.forEach((v, k) => data[k] = parseFloat(v));
+
       fetch('/api/predict', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -200,20 +262,25 @@
           predictResult.textContent = res.error;
           return;
         }
+
         predictResult.className = 'diagnosis mt-4';
         predictResult.innerHTML = `
           <div><strong>检测结果：</strong> ${res.status === 'ok' ? '合格' : (res.status === 'ng' ? '不合格' : '预警')}</div>
           <div><strong>合格概率：</strong> ${(res.prob*100).toFixed(2)}%</div>
           <ul>${res.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>
         `;
+
         if (res.status === 'ok') predictResult.classList.add('ok');
         else if (res.status === 'warning') predictResult.classList.add('warning');
         else predictResult.classList.add('ng');
+
         if (res.waterfall_plot) {
           shapPlot.src = "data:image/png;base64," + res.waterfall_plot;
           shapPlot.classList.remove('d-none');
         }
-        if (res.can_optimize) {
+
+        if (res.status === 'ng') {
+          // 弹出是否需要优化按钮
           optimizeBtn.classList.remove('d-none');
           optimizeBtn.onclick = () => {
             adjustmentResult.textContent = '优化建议生成中...';
@@ -234,11 +301,41 @@
                   `${res.param_map[k]}: 原值 ${v.original_value} → 建议 ${v.suggested_value}，提升概率 ${(v.prob_contribution*100).toFixed(2)}%`
                 ).join('<br/>') + `<br/><br/>${adj.message}`;
             });
+            // 禁用按钮避免重复点击
+            optimizeBtn.disabled = true;
           };
         } else {
           optimizeBtn.classList.add('d-none');
           adjustmentResult.textContent = '';
         }
+      });
+    };
+  }
+
+  // AI工艺员新品参数推荐交互
+  const recommendForm = document.getElementById('recommend-form');
+  const recommendResult = document.getElementById('recommend-result');
+  if (recommendForm) {
+    recommendForm.onsubmit = function(e) {
+      e.preventDefault();
+      recommendResult.textContent = '查询中，请稍候...';
+      const formData = new FormData(recommendForm);
+      const product_id = formData.get('product_id');
+      fetch('/api/recommend_params', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({product_id})
+      }).then(r => r.json()).then(res => {
+        if (res.error) {
+          recommendResult.textContent = res.error;
+          return;
+        }
+        let html = `<h5>推荐参数（产品ID: ${res.product_id}）</h5><ul>`;
+        for (const [k, v] of Object.entries(res.recommended_params)) {
+          html += `<li><strong>${res.param_map[k] || k}:</strong> ${v.toFixed(3)}</li>`;
+        }
+        html += '</ul>';
+        recommendResult.innerHTML = html;
       });
     };
   }
