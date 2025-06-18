@@ -191,36 +191,6 @@ def train():
         flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
-@app.route('/api/process_monitor', methods=['POST'])
-def process_monitor():
-    if not model_cache.get('is_ready'):
-        return jsonify({'error': '请先上传数据并训练模型'}), 400
-    data = request.get_json()
-    warnings = []
-    gb = model_cache['golden_baseline']
-    for p, v in data.items():
-        if p in gb['mean']:
-            m, s = gb['mean'][p], gb['std'][p]
-            if not (m - 3*s <= v <= m + 3*s):
-                warnings.append(f"参数 '{PARAM_MAP.get(p,p)}' ({v:.2f}) 超出黄金基线范围 [{m-3*s:.2f}, {m+3*s:.2f}]")
-    return jsonify({'status': 'warning' if warnings else 'ok', 'messages': warnings or ['所有参数均在黄金基线范围内']})
-
-@app.route('/api/recommend_params', methods=['POST'])
-def recommend_params():
-    if not model_cache.get('is_ready'):
-        return jsonify({'error': '请先上传数据并训练模型'}), 400
-    product_id = request.get_json().get('product_id')
-    kb = model_cache['knowledge_base']
-    features = model_cache['features']
-    cases = kb[kb['product_id'] == product_id]
-    if cases.empty:
-        params = kb[features].mean().to_dict()
-        msg = f"知识库无产品'{product_id}'案例，返回通用建议。"
-    else:
-        params = cases[features].mean().to_dict()
-        msg = f"为产品'{product_id}'生成了推荐参数。"
-    return jsonify({'product_id': product_id, 'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
-
 @app.route('/api/predict', methods=['POST'])
 def predict():
     if not model_cache.get('is_ready'):
