@@ -2,123 +2,42 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>智能玻璃质检与过程优化系统 (IQCS)</title>
+    <title>智能玻璃质检系统 (IQCS)</title>
     <style>
-        :root { --primary-color: #007AFF; --primary-hover: #0056b3; --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #333; --border-color: #dee2e6; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); }
-        header { background-color: var(--primary-color); color: white; padding: 1em 2em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2, h3, h4 { color: var(--primary-color); }
-        h1 { margin: 0; font-size: 1.8em; }
-        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5em; margin-top: 0; }
-        .main-container { padding: 2em; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2em; }
-        .card { background: var(--card-bg); padding: 1.5em 2em; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.12); }
-        .upload-section { grid-column: 1 / -1; margin-bottom: 1em; }
-        input, button { width: 100%; padding: 12px; margin-bottom: 1em; border-radius: 6px; border: 1px solid var(--border-color); font-size: 1em; box-sizing: border-box; }
-        button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
-        button:hover { background-color: var(--primary-hover); }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .results-box { margin-top: 1em; padding: 1em; background-color: var(--bg-color); border-radius: 8px; }
-        .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.5em; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f4f7f6; color: #333; margin: 2em;}
         .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 8px; border: 1px solid transparent; }
         .flash-success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
         .flash-error { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
-        th { background-color: #f8f9fa; font-weight: 600; }
-        .verdict-box { border-left-width: 5px; border-left-style: solid; padding: 1em; margin-top: 1em; border-radius: 4px; }
-        .status-ok { border-left-color: #198754; background-color: #d1e7dd; }
-        .status-warning { border-left-color: #ffc107; background-color: #fff3cd; }
-        .status-ng { border-left-color: #dc3545; background-color: #f8d7da; }
-        .icon { display: inline-block; width: 1em; height: 1em; margin-right: 0.5em; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <header><h1>智能玻璃质检与过程优化系统 (IQCS)</h1></header>
-    <div class="main-container">
-        <!-- 消息闪现区域 -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for c, m in messages %}<div class="flash-message flash-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
-        {% endwith %}
-
-        <!-- 步骤一：上传与训练 -->
-        <div class="card upload-section">
-            <h2>
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
-                步骤一：上传数据并实时训练AI模型
-            </h2>
-            <p>请上传您的训练数据文件 (如 `glass_quality_dataset_2000.csv`)。上传成功后，系统将在后台实时训练模型，并激活下方三大功能模块。</p>
-            <form action="/train" method="post" enctype="multipart/form-data">
-                <input type="file" name="file" required>
-                <button type="submit">上传并开始训练</button>
-            </form>
-        </div>
-        
-        {% if model_ready %}
-        <div class="card upload-section">
-            <h2><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>训练结果概览 (基于文件: {{ cache.filename }})</h2>
-             <div style="display: flex; gap: 2em; align-items: flex-start;">
-                <div style="flex:1;"><h3>模型性能指标</h3><table>...</table></div>
-                <div style="flex:1;"><h3>特征重要性 (Top 10)</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance" style="max-width: 100%;"></div>
-            </div>
-        </div>
-
-        <div class="grid-container">
-            <!-- 模块三：AI侦探 (放在最前面，因为最常用) -->
-            <div class="card" style="grid-column: 1 / -1;">
-                <h2><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>模块三：AI侦探 (缺陷诊断与优化)</h2>
-                <form id="predict-form"><div class="param-grid">...</div><button type="submit">开始诊断</button></form>
-                <div id="predict-spinner" class="spinner"></div><div id="predict-results" class="results-box" style="background:transparent; padding:0;"></div>
-            </div>
-            <!-- 模块一 & 二 -->
-            <div class="card"><h2><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.09-4-4L2 16.99z"/></svg>模块一：产线心电图</h2>...</div>
-            <div class="card"><h2><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>模块二：AI工艺员</h2>...</div>
-        </div>
-        {% else %}
-        <div class="card upload-section" style="text-align:center;"><p style="font-weight: bold;">系统尚未训练，请先上传数据文件以激活全部功能。</p></div>
-        {% endif %}
+    <h1>智能玻璃质检系统 (IQCS)</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for c, m in messages %}
+          <div class="flash-message flash-{{ c }}">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <div>
+        <h2>上传数据并训练模型</h2>
+        <form action="/train" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit">上传并开始训练</button>
+        </form>
     </div>
-
-    <script>
-        // ... (handleApiCall, displayMonitorResults, displayRecommendResults 函数保持不变) ...
-
-        async function displayPredictResults(resultsId, result, payload) {
-            const el = document.getElementById(resultsId);
-            // ... (HTML构建代码，与上一版相同) ...
-            
-            if (result.status === 'ng') {
-                const adjContainer = document.getElementById('adjustment-container');
-                // 【新交互】显示一个按钮，让用户主动获取建议
-                adjContainer.innerHTML = `<button id="get-adjustment-btn">获取智能优化建议</button><div id="adjustment-spinner" class="spinner"></div>`;
-                document.getElementById('get-adjustment-btn').addEventListener('click', async () => {
-                    const spinner = document.getElementById('adjustment-spinner');
-                    spinner.style.display = 'block';
-                    try {
-                        const adjPayload = { input_data: result.input_data, shap_values: result.shap_values };
-                        const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adjPayload) });
-                        const adjResult = await adjResponse.json();
-                        if (!adjResponse.ok) throw new Error(adjResult.error || '获取建议失败');
-                        displayAdjustmentResults('adjustment-container', adjResult, result.threshold);
-                    } catch (error) { adjContainer.innerHTML = `<p style="color: red;">获取调整建议时出错: ${error.message}</p>`; }
-                    finally { spinner.style.display = 'none'; }
-                });
-            }
-        }
-        
-        function displayAdjustmentResults(elementId, result, threshold) {
-            const el = document.getElementById(elementId);
-            // 【新视觉】使用更专业的表格和描述来展示结果
-            let adjustmentsHTML = `<h4>优化思路</h4><p><i>${result.optimization_thought}</i></p>`;
-            if (Object.keys(result.adjustments).length > 0) {
-                adjustmentsHTML += '<h4>具体调整建议</h4><table>...</table>';
-            }
-            adjustmentsHTML += `<p style="margin-top:1em;"><strong>${result.message}</strong></p>`;
-            el.innerHTML = adjustmentsHTML;
-        }
-
-        // ... (handleApiCall 绑定事件的函数保持不变) ...
-    </script>
+    {% if model_ready %}
+    <div>
+        <h2>训练结果</h2>
+        <p>文件名: {{ cache.filename }}</p>
+        <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性" style="max-width: 600px;">
+        <table border="1" cellpadding="5">
+            <tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
+            <tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
+            <tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
+            <tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
+        </table>
+    </div>
+    {% endif %}
 </body>
 </html>
