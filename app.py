@@ -9,7 +9,8 @@ matplotlib.use('Agg') # Use a non-interactive backend for Matplotlib
 import matplotlib.pyplot as plt
 import shap
 import xgboost as xgb
-# 确保正确导入 f1_score
+# 确保 Flask 模块被正确导入
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 # 配置matplotlib字体为中文，并兼容云端环境（推荐在云端部署时安装中文字体或使用英文）
@@ -581,7 +582,7 @@ def adjust():
         # Convert adjustments to a JSON-friendly format, ensure float types
         json_adjustments = {}
         for k, v in adjustments.items():
-            json_adjustments[k] = {inner_k: float(inner_v) if isinstance(inner_v, (int, float, np.number)) else inner_k for inner_k, inner_v in v.items()}
+            json_adjustments[k] = {inner_k: float(inner_v) if isinstance(inner_v, (int, float, np.number)) else inner_v for inner_k, inner_v in v.items()}
 
 
         return jsonify({
