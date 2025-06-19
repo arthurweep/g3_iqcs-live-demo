@@ -25,7 +25,7 @@ PARAM_MAP = {
     "product_id": "产品ID",
     "F_cut_act": "刀头实际压力 (N)",
     "v_cut_act": "切割实际速度 (mm/s)",
-    "F_break_peak": "掰断力峰值 (N)",
+    "F_break_peak": "掰断力峰值 (N)", # Changed from "崩边力峰值" to be consistent with previous context
     "v_wheel_act": "磨轮线速度 (m/s)",
     "F_wheel_act": "磨轮压紧力 (N)",
     "P_cool_act": "冷却水压力 (bar)",
@@ -156,19 +156,13 @@ def calculate_adjustment_suggestions_v2(clf, current_params_raw, feature_names, 
             best_new_val = original_val
             max_prob = initial_prob
             
-            # Define search range based on difference to target mean, or small fixed steps
-            # Attempt to move the parameter in a direction that increases probability
-            target_mean = golden_baseline['mean'].get(feature_name, original_val)
-            
-            # If current value is on the "wrong" side of the mean and SHAP is negative, move towards mean.
-            # Otherwise, try small fixed steps.
+            # Determine initial step direction based on SHAP impact and relationship to mean
             step_direction = 0
-            if impact < 0: # This feature pushes towards NG.
-                # If feature value is high and causes negative SHAP, try decreasing.
-                # If feature value is low and causes negative SHAP, try increasing.
-                # This depends on feature's correlation. Simplest: try moving towards mean if available.
-                if target_mean > original_val: step_direction = 1 # Try increasing
-                elif target_mean < original_val: step_direction = -1 # Try decreasing
+            # If SHAP is negative, and current value is > mean, try decreasing (step_direction = -1)
+            # If SHAP is negative, and current value is < mean, try increasing (step_direction = 1)
+            if impact < 0: # This feature pushes towards NG
+                if original_val > target_mean: step_direction = -1 
+                elif original_val < target_mean: step_direction = 1
                 else: step_direction = 1 # If already at mean, try increasing (arbitrary)
             
             step_values_range = np.linspace(0.01, 0.2, 5) # Try 1% to 20% deviation
@@ -221,16 +215,12 @@ def index():
     displayable_params = []
     if model_ready:
         # These are the base features that users directly input
-        base_features_for_display = [
-            ("F_cut_act", "刀头实际压力 (N)"), 
-            ("v_cut_act", "切割实际速度 (mm/s)"), 
-            ("F_break_peak", "掰断力峰值 (N)"), 
-            ("v_wheel_act", "磨轮线速度 (m/s)"), 
-            ("F_wheel_act", "磨轮压紧力 (N)"), 
-            ("P_cool_act", "冷却水压力 (bar)"), 
-            ("t_glass_meas", "玻璃厚度 (mm)")
-        ]
-        displayable_params = base_features_for_display # These are directly editable by user
+        # They should correspond to the keys in PARAM_MAP that are NOT product_id or engineered features
+        all_param_names = list(PARAM_MAP.keys())
+        base_features_in_param_map = [p for p in all_param_names if not any(x in p for x in ['product_id', 'ratio', 'indicator', 'density'])]
+
+        for param_name in base_features_in_param_map:
+            displayable_params.append((param_name, PARAM_MAP.get(param_name, param_name)))
         
     return render_template('index.html', model_ready=model_ready, cache=model_cache, displayable_params=displayable_params)
 
@@ -369,7 +359,7 @@ def process_monitor():
         if p in gb['mean']: # Ensure golden baseline has data for this parameter
             m, s = gb['mean'][p], gb['std'][p]
             if s is None or s < 1e-6: # Handle cases with zero or near-zero standard deviation
-                if not (abs(v - m) < 1e-3): # Check for exact match or very small tolerance
+                if not (abs(v - m) < 1e-3): # If not close enough to mean
                     warnings.append({
                         "param": p,
                         "current": v,
