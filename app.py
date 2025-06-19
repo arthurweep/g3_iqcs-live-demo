@@ -278,7 +278,7 @@ def get_adjustment_suggestion_logic(current_params_raw, model_cache_data):
         suggestion_text += f"当前参数均在基线范围内，但根据AI分析，参数 **{param_to_adjust}** 对不合格预测贡献最大。建议进行微调：\n"
         suggestion_text += f"- **{param_to_adjust}**: 从 `{current_val_impacted:.2f}` 调整至 `{new_val_impacted:.2f}` 附近。\n"
 
-    # Re-calculate ALL engineered features for the _adjusted_ parameters
+    # Re-calculate ALL engineered features for the _adjusted_ parameters, if any base features changed
     # This is critical because changing a base feature (e.g., F_cut_act) also changes engineered features
     adjusted_params_dict_raw = {}
     for param_name in current_params_raw.keys(): # Only base features
