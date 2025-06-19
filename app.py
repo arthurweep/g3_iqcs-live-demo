@@ -30,13 +30,15 @@ UNQUALIFIED_CLASS_INDEX = 1
 
 # --- !!! 关键配置：请根据您的实际工艺要求修改此处的黄金工艺基准 !!! ---
 # 格式为: '参数名': {'min': 最小值, 'max': 最大值}
+# 这里的示例值与前端UI图像中的默认输入值相对应，您需要根据实际工艺范围进行调整。
 GOLDEN_BASELINE = {
-    '参数A': {'min': 10, 'max': 20},
-    '参数B': {'min': 5.0, 'max': 15.0},
-    '参数C': {'min': 100, 'max': 120},
-    '参数D': {'min': 0.8, 'max': 1.2},
-    '参数E': {'min': 55, 'max': 65}
-    # ... 请继续添加或修改其他参数，确保参数名与训练数据中的特征名完全一致
+    '参数A': {'min': 10.0, 'max': 20.0}, # 例如，基于15.0的范围
+    '参数B': {'min': 5.0, 'max': 15.0},  # 例如，基于10.0的范围
+    '参数C': {'min': 100, 'max': 120},   # 例如，基于110的范围
+    '参数D': {'min': 0.8, 'max': 1.2},   # 例如，基于0.95的范围
+    '参数E': {'min': 50, 'max': 70}     # 例如，基于60的范围
+    # ... 请根据您的实际工艺数据，继续添加或修改其他参数
+    # 确保这里的参数名（键）与前端HTML中input的'name'属性以及训练数据中的列名完全一致。
 }
 
 
@@ -192,17 +194,25 @@ def train_model_endpoint():
         num_samples = 1000 # 增加样本量
         simulated_data = {}
         for name, val in GOLDEN_BASELINE.items():
-            simulated_data[name] = np.random.uniform(val['min'] - (val['max']-val['min'])*0.2, 
-                                                     val['max'] + (val['max']-val['min'])*0.2, 
+            # 生成模拟数据时，允许一部分数据超出基线，以模拟真实情况
+            range_span = val['max'] - val['min']
+            simulated_data[name] = np.random.uniform(val['min'] - range_span*0.5, 
+                                                     val['max'] + range_span*0.5, 
                                                      num_samples)
         df = pd.DataFrame(simulated_data)
         
         # 模拟一个更复杂的质量标签逻辑，增加“不合格”样本的代表性
         # 例如，某些参数超出了范围就容易不合格
         df['quality_label'] = 0 # 默认合格
-        df.loc[(df['参数A'] < GOLDEN_BASELINE['参数A']['min']) | (df['参数A'] > GOLDEN_BASELINE['参数A']['max']) |
-               (df['参数C'] < GOLDEN_BASELINE['参数C']['min']) | (df['参数C'] > GOLDEN_BASELINE['参数C']['max']), 'quality_label'] = 1
-        df.loc[(df['参数B'] < GOLDEN_BASELINE['参数B']['min'] - 2) & (df['参数D'] > GOLDEN_BASELINE['参数D']['max'] + 0.1), 'quality_label'] = 1
+        # 模拟不合格条件：如果参数A或C严重偏离基线，或参数B和D组合异常
+        if '参数A' in df.columns and '参数C' in df.columns:
+            df.loc[(df['参数A'] < GOLDEN_BASELINE['参数A']['min'] - 2) | 
+                   (df['参数A'] > GOLDEN_BASELINE['参数A']['max'] + 2) |
+                   (df['参数C'] < GOLDEN_BASELINE['参数C']['min'] - 5) | 
+                   (df['参数C'] > GOLDEN_BASELINE['参数C']['max'] + 5), 'quality_label'] = 1
+        if '参数B' in df.columns and '参数D' in df.columns:
+            df.loc[(df['参数B'] < GOLDEN_BASELINE['参数B']['min'] - 1) & 
+                   (df['参数D'] > GOLDEN_BASELINE['参数D']['max'] + 0.05), 'quality_label'] = 1
         
         logging.info(f"模拟数据生成完成，样本数: {len(df)}，合格样本: {len(df[df['quality_label'] == 0])}，不合格样本: {len(df[df['quality_label'] == 1])}")
 
