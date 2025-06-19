@@ -1,186 +1,465 @@
-
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>广州百超玻璃质检系统 (IQCS) </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广州福耀智能质检系统 (IQCS)</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f4f7f6; color: #333; }
-        h1, h2, h3, h4 { color: #0056b3; }
-        h3 { border-bottom: 1px solid #007bff; padding-bottom: 0.3em; }
-        .main-container { max-width: 1600px; margin: auto; }
-        .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2em; }
-        .module { background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .upload-section { grid-column: 1 / -1; margin-bottom: 2em; }
-        input, button { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .results-box { margin-top: 1em; padding: 1em; background-color: #e9ecef; border-radius: 4px; min-height: 50px; }
-        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 1em; }
-        .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 4px; }
-        .flash-success { background-color: #d4edda; color: #155724; }
-        .flash-error { background-color: #f8d7da; color: #721c24; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #007bff; color: white; }
-        .verdict-box { border-left-width: 5px; border-left-style: solid; padding: 0.5em 1em; margin-top: 1em; border-radius: 4px; }
-        .status-ok { border-left-color: green; background-color: #e8f5e9; }
-        .status-warning { border-left-color: orange; background-color: #fff3e0; }
-        .status-ng { border-left-color: red; background-color: #ffebee; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h2 {
+            font-size: 1.8em;
+        }
+        h3 {
+            font-size: 1.4em;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="file"],
+        input[type="text"],
+        input[type="number"],
+        button {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 200px; /* Adjust width for parameter inputs */
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: auto;
+            min-width: 120px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .results-box {
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            word-wrap: break-word; /* Break long words */
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .status-ok { color: green; font-weight: bold; }
+        .status-ng { color: red; font-weight: bold; }
+        .status-warning { color: orange; font-weight: bold; }
+        .image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .param-input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .param-input-grid .form-group {
+            margin-bottom: 0;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .suggestion-box {
+            background-color: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .prob-change {
+            font-weight: bold;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <h1>智能玻璃质检系统 (IQCS) - 实时上传训练演示版</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for c, m in messages %}<div class="flash-message flash-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
-        {% endwith %}
+    <div class="container">
+        <h1>广州福耀智能质检系统 (IQCS)</h1>
+        <p>欢迎使用智能质检系统。本系统旨在通过AI技术，实现玻璃预处理产线的质量优化和管理。</p>
 
-        <div class="module upload-section">
-            <h2>步骤一：上传数据并实时训练AI模型</h2>
-            <form action="/train" method="post" enctype="multipart/form-data"><input type="file" name="file" required><button type="submit">上传并开始训练</button></form>
+        <div class="section">
+            <h2>1. 模型训练与管理</h2>
+            <p>上传历史生产数据 (CSV文件)，训练AI模型。</p>
+            <div class="form-group">
+                <label for="csvFile">上传 CSV 文件:</label>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+            <button onclick="trainModel()">开始训练模型</button>
+            <div id="trainResults" class="results-box"></div>
+            <div id="featureImportancePlot" class="image-container"></div>
         </div>
-        
-        {% if model_ready %}
-        <div class="module upload-section">
-            <h2>训练结果概览 (基于文件: {{ cache.filename }})</h2>
-             <div style="display: flex; gap: 2em; align-items: flex-start;">
-                <div style="flex:1;">
-                    <h3>模型性能指标</h3>
-                    <table><tr><th>指标</th><th>值</th></tr>
-                        <tr><td>准确率 (Accuracy)</td><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
-                        <tr><td>不合格品召回率 (Recall NG)</td><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
-                        <tr><td>不合格品精确率 (Precision NG)</td><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
-                        <tr><td>不合格品F1分数 (F1 NG)</td><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
-                    </table>
+
+        <div class="section">
+            <h2>2. 产线心电图 (Process Monitor)</h2>
+            <p>实时监控工艺参数是否在“黄金工艺基线”范围内，提前预警异常波动。</p>
+            <div class="param-input-grid">
+                <!-- 示例参数，请根据实际情况添加更多参数 -->
+                <div class="form-group">
+                    <label for="monitor_F_cut_act">刀头压力 (F_cut_act):</label>
+                    <input type="number" id="monitor_F_cut_act" value="10.5" step="0.1">
                 </div>
-                <div style="flex:1;"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance" style="max-width: 100%;"></div>
+                <div class="form-group">
+                    <label for="monitor_v_cut_act">切割速度 (v_cut_act):</label>
+                    <input type="number" id="monitor_v_cut_act" value="150" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="monitor_F_break_peak">掰边力峰值 (F_break_peak):</label>
+                    <input type="number" id="monitor_F_break_peak" value="25" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="monitor_t_glass_meas">玻璃厚度 (t_glass_meas):</label>
+                    <input type="number" id="monitor_t_glass_meas" value="2.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="monitor_grinding_speed">磨削速度 (grinding_speed):</label>
+                    <input type="number" id="monitor_grinding_speed" value="80" step="1">
+                </div>
+                <!-- 更多参数... -->
             </div>
+            <button onclick="monitorProcess()">开始监控</button>
+            <div id="monitorResults" class="results-box"></div>
         </div>
 
-        <div class="grid-container">
-            <div class="module">
-                <h2>模块一：产线心电图</h2>
-                <form id="monitor-form"><div class="param-grid">
-                    {% for feature, name in displayable_params %}
-                        <div><label for="monitor_{{ feature }}">{{ name }}:</label><input type="number" step="any" id="monitor_{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
-                    {% endfor %}
-                </div><button type="submit">监控检查</button></form>
-                <div id="monitor-spinner" class="spinner"></div><div id="monitor-results" class="results-box"></div>
+        <div class="section">
+            <h2>3. AI工艺员 (Recommended Parameters)</h2>
+            <p>根据产品ID推荐最佳开机参数，缩短调试周期。</p>
+            <div class="form-group">
+                <label for="partId">产品ID (Part_ID):</label>
+                <input type="text" id="partId" value="ABC-12345">
             </div>
-            <div class="module">
-                <h2>模块二：AI工艺员</h2>
-                <form id="recommend-form"><label for="product_id">产品ID (例如: A, B, C):</label><input type="text" id="product_id" name="product_id" value="A" required><button type="submit">获取推荐参数</button></form>
-                <div id="recommend-spinner" class="spinner"></div><div id="recommend-results" class="results-box"></div>
-            </div>
-            <div class="module">
-                <h2>模块三：AI侦探</h2>
-                <form id="predict-form"><div class="param-grid">
-                     {% for feature, name in displayable_params %}
-                        <div><label for="{{ feature }}">{{ name }}:</label><input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
-                     {% endfor %}
-                </div><button type="submit">开始诊断</button></form>
-                <div id="predict-spinner" class="spinner"></div><div id="predict-results" class="results-box"></div>
-            </div>
+            <button onclick="recommendParameters()">获取推荐参数</button>
+            <div id="recommendResults" class="results-box"></div>
         </div>
-        {% else %}
-        <div class="module upload-section"><p style="text-align: center; font-weight: bold;">系统尚未训练，请先上传数据文件以激活全部功能。</p></div>
-        {% endif %}
+
+        <div class="section">
+            <h2>4. AI侦探 (Quality Prediction & Adjustment Suggestion)</h2>
+            <p>输入当前生产参数，AI秒级诊断质量问题并提供调优建议。</p>
+            <div class="param-input-grid">
+                <!-- 示例参数，请根据实际情况添加更多参数 -->
+                <div class="form-group">
+                    <label for="predict_F_cut_act">刀头压力 (F_cut_act):</label>
+                    <input type="number" id="predict_F_cut_act" value="10.5" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="predict_v_cut_act">切割速度 (v_cut_act):</label>
+                    <input type="number" id="predict_v_cut_act" value="150" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="predict_F_break_peak">掰边力峰值 (F_break_peak):</label>
+                    <input type="number" id="predict_F_break_peak" value="25" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="predict_t_glass_meas">玻璃厚度 (t_glass_meas):</label>
+                    <input type="number" id="predict_t_glass_meas" value="2.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="predict_grinding_speed">磨削速度 (grinding_speed):</label>
+                    <input type="number" id="predict_grinding_speed" value="80" step="1">
+                </div>
+                <!-- 更多参数，确保名称与 app.py 中的 features 列表一致 -->
+            </div>
+            <button onclick="predictQuality()">诊断质量</button>
+            <div id="predictResults" class="results-box"></div>
+            <div id="shapPlotContainer" class="image-container"></div>
+            <div class="button-group" id="suggestionButtonGroup" style="display: none;">
+                <button onclick="getAdjustmentSuggestion()">获取调优建议</button>
+            </div>
+            <div id="adjustmentSuggestionResults" class="suggestion-box" style="display: none;"></div>
+        </div>
+
     </div>
 
     <script>
-        async function handleApiCall(formId, spinnerId, resultsId, apiUrl, getPayload, displayFunc) {
-            const form = document.getElementById(formId);
-            if(form) {
-                form.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const spinner = document.getElementById(spinnerId), resultsDiv = document.getElementById(resultsId);
-                    spinner.style.display = 'block'; resultsDiv.innerHTML = '正在处理请求...';
-                    const payload = getPayload(form);
-                    try {
-                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.error || '请求失败');
-                        displayFunc(resultsId, result, payload);
-                    } catch (error) { resultsDiv.innerHTML = `<p style="color: red;">错误: ${error.message}</p>`; } 
-                    finally { spinner.style.display = 'none'; }
+        // 用于存储从 /api/predict 获得的原始参数，供后续调优建议使用
+        let currentOriginalParams = null; 
+
+        // --- 通用函数 ---
+        function displayMessage(elementId, message, isHtml = false, className = '') {
+            const element = document.getElementById(elementId);
+            if (isHtml) {
+                element.innerHTML = message;
+            } else {
+                element.textContent = message;
+            }
+            element.className = 'results-box ' + className; // Reset and apply class
+        }
+
+        function clearResults(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '';
+            element.className = 'results-box'; // Reset class
+        }
+
+        function displayImage(elementId, base64Image) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = ''; // Clear previous image
+            if (base64Image) {
+                const img = document.createElement('img');
+                img.src = 'data:image/png;base64,' + base64Image;
+                container.appendChild(img);
+            }
+        }
+
+        function getParameterInputs(prefix) {
+            const inputs = document.querySelectorAll(`#${prefix}_F_cut_act, #${prefix}_v_cut_act, #${prefix}_F_break_peak, #${prefix}_t_glass_meas, #${prefix}_grinding_speed`);
+            const params = {};
+            inputs.forEach(input => {
+                // Remove prefix to get actual parameter name
+                const paramName = input.id.replace(`${prefix}_`, ''); 
+                params[paramName] = parseFloat(input.value);
+            });
+            return params;
+        }
+
+        // --- 模块 1: 模型训练 ---
+        async function trainModel() {
+            clearResults('trainResults');
+            displayImage('featureImportancePlot', null);
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                displayMessage('trainResults', '请选择一个CSV文件！', false, 'status-ng');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/train', {
+                    method: 'POST',
+                    body: formData
                 });
-            }
-        }
-        
-        function displayMonitorResults(resultsId, result) {
-            const el = document.getElementById(resultsId);
-            const statusColor = result.status === 'ok' ? 'green' : 'orange';
-            el.innerHTML = `<div style="color: ${statusColor}; font-weight: bold;">${result.status === 'ok' ? '过程稳定' : '过程异常预警!'}</div>${result.messages.map(msg => `<p>${msg}</p>`).join('')}`;
-        }
-        
-        function displayRecommendResults(resultsId, result) {
-            const el = document.getElementById(resultsId);
-            let paramsHTML = '<table><tr><th>参数</th><th>推荐值</th></tr>';
-            for (const [key, value] of Object.entries(result.recommended_params)) {
-                paramsHTML += `<tr><td>${result.param_map[key] || key}</td><td>${value.toFixed(3)}</td></tr>`;
-            }
-            paramsHTML += '</table>';
-            el.innerHTML = `<h3>${result.message}</h3>${paramsHTML}`;
-        }
+                const result = await response.json();
 
-        async function displayPredictResults(resultsId, result, payload) {
-            const el = document.getElementById(resultsId);
-            let statusText, statusClass;
-            if (result.status === 'ok') { statusText = '合格 (OK)'; statusClass = 'status-ok'; } 
-            else if (result.status === 'warning') { statusText = '过程预警 (Warning)'; statusClass = 'status-warning'; } 
-            else { statusText = '不合格 (NG)'; statusClass = 'status-ng'; }
-
-            let reasonHTML = `<h4>诊断依据</h4><ul>${result.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>`;
-
-            el.innerHTML = `<h3>诊断结论</h3>
-                <div class="verdict-box ${statusClass}">
-                    <p style="font-weight:bold; font-size: 1.2em;">最终判定: ${statusText}</p>${reasonHTML}
-                </div>
-                <h4>AI模型内部判断</h4><table>
-                <tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr>
-                <tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr>
-                </table>
-                <h3>根因分析 (SHAP图)</h3>
-                <img src="data:image/png;base64,${result.waterfall_plot}" alt="SHAP Plot" style="max-width: 100%;">
-                <div id="adjustment-section" class="results-box" style="margin-top:1em;"></div>`;
-            
-            if (result.status === 'ng') {
-                const adjSection = document.getElementById('adjustment-section');
-                adjSection.innerHTML = '<h3>正在生成调整建议...</h3><div class="spinner" style="display:block;"></div>';
-                try {
-                    const adjPayload = { input_data: result.input_data, shap_values: result.shap_values };
-                    const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adjPayload) });
-                    const adjResult = await adjResponse.json();
-                    if (!adjResponse.ok) throw new Error(adjResult.error || '获取建议失败');
-                    displayAdjustmentResults('adjustment-section', adjResult, result.threshold);
-                } catch (error) { adjSection.innerHTML = `<p style="color: red;">获取调整建议时出错: ${error.message}</p>`; }
-            }
-        }
-        
-        function displayAdjustmentResults(elementId, result, threshold) {
-            const el = document.getElementById(elementId);
-            let adjustmentsHTML = `<h3>智能优化建议</h3><p>以下建议旨在将样本的合格(OK)概率提升至阈值 <strong>${(threshold*100).toFixed(2)}%</strong> 以上。</p>`;
-            if (Object.keys(result.adjustments).length > 0) {
-                adjustmentsHTML += '<table><tr><th>待调整特征</th><th>当前值</th><th>建议调整量</th><th>调整后目标值</th><th>此调整对OK概率的预期贡献</th></tr>';
-                for (const [key, value] of Object.entries(result.adjustments)) {
-                    adjustmentsHTML += `<tr>
-                        <td>${result.param_map[key] || key}</td><td>${value.original_value.toFixed(3)}</td>
-                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change > 0 ? '+':''}${value.change.toFixed(3)}</td>
-                        <td style="font-weight:bold;">${value.suggested_value.toFixed(3)}</td>
-                        <td style="color:green; font-weight:bold;">+${(value.prob_contribution*100).toFixed(2)}%</td>
-                    </tr>`;
+                if (response.ok) {
+                    let msg = `<h3>${result.message}</h3>`;
+                    msg += `<p><strong>模型性能:</strong></p>`;
+                    for (const key in result.performance) {
+                        if (typeof result.performance[key] === 'number') {
+                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${(result.performance[key] * 100).toFixed(2)}%</p>`;
+                        } else {
+                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${result.performance[key]}</p>`;
+                        }
+                    }
+                    displayMessage('trainResults', msg, true, 'status-ok');
+                    displayImage('featureImportancePlot', result.feature_importance_plot);
+                } else {
+                    displayMessage('trainResults', `训练失败: ${result.error}`, false, 'status-ng');
                 }
-                adjustmentsHTML += '</table>';
+            } catch (error) {
+                displayMessage('trainResults', `网络或服务器错误: ${error}`, false, 'status-ng');
             }
-            adjustmentsHTML += `<p style="margin-top:1em;"><strong>${result.message}</strong></p>`;
-            el.innerHTML = adjustmentsHTML;
         }
 
-        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayMonitorResults);
-        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', (f) => ({ product_id: f.product_id.value }), displayRecommendResults);
-        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayPredictResults);
+        // --- 模块 2: 产线心电图 ---
+        async function monitorProcess() {
+            clearResults('monitorResults');
+            const params = getParameterInputs('monitor');
+
+            try {
+                const response = await fetch('/api/monitor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    if (result.status === 'Abnormal') {
+                        let msg = `<span class="status-warning">${result.message}</span><br>`;
+                        msg += `<strong>详情:</strong><br>${result.details.join('<br>')}`;
+                        displayMessage('monitorResults', msg, true, 'status-warning');
+                    } else {
+                        displayMessage('monitorResults', result.message, false, 'status-ok');
+                    }
+                } else {
+                    displayMessage('monitorResults', `监控失败: ${result.error}`, false, 'status-ng');
+                }
+            } catch (error) {
+                displayMessage('monitorResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            }
+        }
+
+        // --- 模块 3: AI工艺员 ---
+        async function recommendParameters() {
+            clearResults('recommendResults');
+            const partId = document.getElementById('partId').value;
+
+            if (!partId) {
+                displayMessage('recommendResults', '请输入产品ID！', false, 'status-ng');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Part_ID: partId })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    let msg = `<p>${result.message}</p>`;
+                    msg += `<strong>推荐参数:</strong><br>`;
+                    for (const key in result.recommended_params) {
+                        msg += `- ${key}: ${result.recommended_params[key].toFixed(2)}<br>`;
+                    }
+                    displayMessage('recommendResults', msg, true, 'status-ok');
+                } else {
+                    displayMessage('recommendResults', `推荐失败: ${result.error}`, false, 'status-ng');
+                }
+            } catch (error) {
+                displayMessage('recommendResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            }
+        }
+
+        // --- 模块 4: AI侦探 (核心修改部分) ---
+        async function predictQuality() {
+            clearResults('predictResults');
+            displayImage('shapPlotContainer', null);
+            document.getElementById('suggestionButtonGroup').style.display = 'none';
+            document.getElementById('adjustmentSuggestionResults').style.display = 'none';
+
+            const params = getParameterInputs('predict');
+            currentOriginalParams = params; // 存储原始参数
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    let statusClass = '';
+                    if (result.status === 'OK') {
+                        statusClass = 'status-ok';
+                    } else if (result.status === 'NG') {
+                        statusClass = 'status-ng';
+                    } else if (result.status === 'Warning') {
+                        statusClass = 'status-warning';
+                    }
+                    
+                    displayMessage('predictResults', `状态: <span class="${statusClass}">${result.status}</span><br>${result.message}`, true);
+
+                    if (result.status === 'NG') {
+                        displayImage('shapPlotContainer', result.shap_plot);
+                        if (result.show_suggestion_button) {
+                            document.getElementById('suggestionButtonGroup').style.display = 'flex'; // 显示按钮组
+                            currentOriginalParams = result.original_params; // 存储服务器返回的原始参数（包含处理后的派生特征）
+                        }
+                    }
+
+                } else {
+                    displayMessage('predictResults', `诊断失败: ${result.error}`, false, 'status-ng');
+                }
+            } catch (error) {
+                displayMessage('predictResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            }
+        }
+
+        // 新增：获取调优建议的函数
+        async function getAdjustmentSuggestion() {
+            const adjustmentSuggestionResults = document.getElementById('adjustmentSuggestionResults');
+            adjustmentSuggestionResults.style.display = 'block'; // 显示建议框
+            adjustmentSuggestionResults.innerHTML = '正在计算调优建议...'; // 提示用户正在处理
+
+            if (!currentOriginalParams) {
+                adjustmentSuggestionResults.innerHTML = '<span class="status-ng">错误：未找到原始参数进行调优。请先进行质量诊断。</span>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/get_adjustment_suggestion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ original_params: currentOriginalParams })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    let msg = `<p><strong>调优建议:</strong><br>${result.suggestion.replace(/\n/g, '<br>')}</p>`;
+                    let probClass = result.is_adjusted_ok ? 'status-ok' : 'status-ng';
+                    msg += `<p class="prob-change">调整前合格概率: ${(result.original_prob_ok * 100).toFixed(2)}%</p>`;
+                    msg += `<p class="prob-change">调整后预测合格概率: <span class="${probClass}">${(result.adjusted_prob_ok * 100).toFixed(2)}%</span></p>`;
+                    if (result.is_adjusted_ok) {
+                        msg += `<p class="status-ok">预测调整后可达到合格标准。</p>`;
+                    } else {
+                        msg += `<p class="status-ng">预测调整后仍未达到合格标准，可能需要进一步调优。</p>`;
+                    }
+                    adjustmentSuggestionResults.innerHTML = msg;
+                } else {
+                    adjustmentSuggestionResults.innerHTML = `<span class="status-ng">获取调优建议失败: ${result.error}</span>`;
+                }
+            } catch (error) {
+                adjustmentSuggestionResults.innerHTML = `<span class="status-ng">网络或服务器错误: ${error}</span>`;
+            }
+        }
+
     </script>
 </body>
 </html>
