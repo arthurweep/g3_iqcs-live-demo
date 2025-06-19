@@ -370,10 +370,10 @@
                         <button id="hideTrainSectionBtn" style="display: none;" onclick="hideTrainSection()">隐藏此模块</button>
                     </div>
                     <div id="trainResults" class="results-box" style="display: none;">
-                        {% if cache.filename %}
+                        {% if cache.get('filename') %} {# Fix: Use cache.get() #}
                             <h3>训练结果概览 (基于文件: {{ cache.filename }})</h3>
                             <pre>
-                                {% if cache.metrics %}
+                                {% if cache.get('metrics') %} {# Fix: Use cache.get() #}
                                     |指标|值|
                                     |---|---|
                                     |准确率 (Accuracy)|{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}|
@@ -389,9 +389,9 @@
                         {% endif %}
                     </div>
                     <div id="featureImportancePlot" class="image-container" style="display: none;">
-                        {% if cache.feature_plot %}
+                        {% if cache.get('feature_plot') %} {# Fix: Use cache.get() #}
                             <h3>特征重要性</h3>
-                            <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance Plot">
+                            <img src="data:image/png;base664,{{ cache.feature_plot }}" alt="Feature Importance Plot">
                         {% endif %}
                     </div>
                 </div>
@@ -430,6 +430,7 @@
         const BASE_API_URL = ''; // Keep empty for relative paths as Flask serves both
 
         let currentOriginalParams = null; // Store params for adjustment suggestion
+        let currentShapValues = null; // Store SHAP values for adjustment suggestion
         const TRAIN_SECTION_HIDDEN_KEY = 'trainSectionHidden'; // Key for localStorage
 
         // --- Helper Functions ---
@@ -480,6 +481,7 @@
             if (sectionId === 'detectiveSection') {
                 document.getElementById('getSuggestionBtn').style.display = 'none';
                 currentOriginalParams = null; // Clear stored parameters
+                currentShapValues = null; // Clear stored SHAP values
             }
             // Specific elements to clear/hide for Monitor
             if (sectionId === 'monitorSection') {
@@ -551,6 +553,10 @@
             const trainSection = document.getElementById('trainSection');
             const modelReady = {{ model_ready | tojson }}; // Get model ready status from Jinja context
             
+            // Fix: Use .get() with default values to prevent Jinja2 TypeError for cache properties
+            const cacheFilename = {{ cache.get('filename', '') | tojson }};
+            const cacheFeaturePlot = {{ cache.get('feature_plot', '') | tojson }};
+
             // If model is already ready AND user previously hid it, keep it hidden
             if (modelReady && localStorage.getItem(TRAIN_SECTION_HIDDEN_KEY) === 'true') {
                 trainSection.style.display = 'none';
@@ -564,10 +570,10 @@
                 }
             }
             // For initial state based on Jinja, show results if cache data exists
-            if ({{ cache.filename | tojson }}) {
+            if (cacheFilename) { // Use the variable that is guaranteed to be JSON serializable
                 document.getElementById('trainResults').style.display = 'block';
             }
-            if ({{ cache.feature_plot | tojson }}) {
+            if (cacheFeaturePlot) { // Use the variable that is guaranteed to be JSON serializable
                 document.getElementById('featureImportancePlot').style.display = 'block';
             }
             
@@ -699,13 +705,13 @@
 
                 displayMessage('predictResults', `<strong>状态: <span class="${statusClass}">${result.status.toUpperCase()}</span></strong><br>${verdictHtml}`, true);
 
-
                 if (result.status === 'ng') {
                     displayImage('shapPlotContainer', result.waterfall_plot); 
                     document.getElementById('shapPlotContainer').style.display = 'block';
                     if (result.show_suggestion_button) {
                         document.getElementById('getSuggestionBtn').style.display = 'inline-flex'; 
                     }
+                    currentShapValues = result.shap_values; // Store SHAP values for adjustment
                 }
 
             } catch (error) {
@@ -733,7 +739,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         input_data: currentOriginalParams, 
-                        shap_values: null // SHAP values are now re-computed on backend for adjustment logic
+                        shap_values: currentShapValues // Pass stored SHAP values
                     })
                 });
                 const result = await response.json();
@@ -747,11 +753,11 @@
                             msg += `<pre>- **${paramDisplayName}**: 原始值 ${adj.original_value.toFixed(2)}，建议调整至 ${adj.suggested_value.toFixed(2)}。<br>  (变化量: ${adj.change.toFixed(2)}, 预测合格概率提升: ${(adj.prob_increase * 100).toFixed(2)}%)</pre>`;
                         }
                     } else {
-                        msg += `<p>未能找到有效的参数调整建议。</p>`;
+                        msg += `<p>${result.message || '未能找到有效的参数调整建议。'}</p>`;
                     }
                     
                     // Use model_cache['best_threshold'] from Jinja for client-side comparison
-                    const bestThreshold = {{ cache.best_threshold | tojson }};
+                    const bestThreshold = {{ cache.get('best_threshold', 0.5) | tojson }}; // Fix: Use cache.get()
                     let adjustedProbClass = result.final_prob_after_adjustment >= bestThreshold ? 'value-ok' : 'value-ng';
                     msg += `<p class="prob-change">调整后预测合格概率: <span class="${adjustedProbClass}">${(result.final_prob_after_adjustment * 100).toFixed(2)}%</span></p>`;
                     
