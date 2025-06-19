@@ -9,64 +9,65 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            background-color: #1e2833; /* Dark background for industrial feel */
+            background-color: #1a222c; /* Deep dark blue-grey for industrial feel */
             color: #ecf0f1; /* Light text for readability */
             line-height: 1.6;
         }
         .container {
-            max-width: 1360px; /* Slightly wider */
-            margin: 20px auto;
+            max-width: 1400px; /* Wider for dashboard feel */
+            margin: 25px auto;
             background-color: #2c3e50; /* Slightly lighter dark for main container */
-            padding: 35px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border: 1px solid #3d5a73; /* Subtle border */
         }
         h1, h2, h3 {
             color: #d4e3ef; /* Lighter headings */
             border-bottom: 2px solid #3c5066; /* Darker border */
-            padding-bottom: 12px;
-            margin-top: 30px;
-            margin-bottom: 25px;
+            padding-bottom: 15px;
+            margin-top: 35px;
+            margin-bottom: 30px;
         }
-        h1 { font-size: 2.4em; text-align: center; margin-bottom: 35px; color: #76daff; /* Bright blue for main title */ }
-        h2 { font-size: 1.9em; }
-        h3 { font-size: 1.5em; }
+        h1 { font-size: 2.8em; text-align: center; margin-bottom: 40px; color: #76daff; /* Bright blue for main title */ }
+        h2 { font-size: 2.2em; }
+        h3 { font-size: 1.7em; }
         p { color: #bdc3c7; } /* Slightly darker paragraph text */
 
         /* Section Styling */
         .section {
-            margin-bottom: 30px;
-            padding: 28px;
+            margin-bottom: 35px;
+            padding: 30px;
             background-color: #34495e; /* Darker card background */
             border: 1px solid #4a6681; /* Subtle border */
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
         }
         .section-header {
-            font-size: 1.6em;
+            font-size: 1.8em;
             font-weight: bold;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
             color: #ecf0f1;
         }
 
         /* Form Elements */
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
         label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-weight: bold;
             color: #aeb5be;
-            font-size: 0.98em;
+            font-size: 1em;
         }
         input[type="file"],
         input[type="text"],
         input[type="number"] {
-            padding: 10px 15px;
+            padding: 12px 18px;
             border: 1px solid #5a738c; /* Darker border */
-            border-radius: 6px;
-            font-size: 1em;
+            border-radius: 8px;
+            font-size: 1.05em;
             width: 100%;
             box-sizing: border-box;
             background-color: #435b75; /* Darker input background */
@@ -77,38 +78,41 @@
         input[type="text"]:focus,
         input[type="number"]:focus {
             border-color: #76daff; /* Bright blue focus */
-            box-shadow: 0 0 0 3px rgba(118, 218, 255, 0.3);
+            box-shadow: 0 0 0 4px rgba(118, 218, 255, 0.3);
             outline: none;
         }
         
         button {
-            padding: 12px 28px;
+            padding: 14px 30px;
             background-color: #2ecc71; /* Green for primary action */
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 1.05em;
+            border-radius: 8px;
+            font-size: 1.1em;
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         button:hover {
             background-color: #27ae60;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
         }
         button:active {
             transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
         button:disabled {
             background-color: #7f8c8d; /* Greyed out for disabled */
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
+            text-shadow: none;
         }
         
         #hideTrainSectionBtn {
@@ -129,89 +133,104 @@
         .main-content-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 35px;
+            gap: 40px;
         }
         .column {
             display: flex;
             flex-direction: column;
-            gap: 30px;
+            gap: 35px;
         }
 
         /* Results Display */
         .results-box {
             background-color: #222e3b; /* Darker background for results */
             border: 1px solid #4a6681;
-            border-radius: 8px;
-            padding: 18px;
-            margin-top: 25px;
-            font-size: 0.92em;
-            max-height: 450px;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            font-size: 0.95em;
+            max-height: 500px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-word;
             color: #d4e3ef;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
         }
         .image-container {
             text-align: center;
-            margin-top: 25px;
+            margin-top: 30px;
         }
         .image-container img {
             max-width: 100%;
             height: auto;
             border: 1px solid #4a6681;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.35);
         }
 
         /* Status Colors & Indicators */
+        .flash-message {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .flash-message.success { background-color: #2ecc71; color: white; }
+        .flash-message.error { background-color: #e74c3c; color: white; }
+        
         .status-ok { background-color: #2ecc71; color: white; border-color: #27ae60; padding: 12px; border-radius: 6px; font-weight: bold; }
         .status-ng { background-color: #e74c3c; color: white; border-color: #c0392b; padding: 12px; border-radius: 6px; font-weight: bold; }
         .status-warning { background-color: #f39c12; color: white; border-color: #e67e22; padding: 12px; border-radius: 6px; font-weight: bold; }
         
         .status-message strong {
-            color: inherit; /* Inherit color from parent .status-xxx */
+            color: inherit; 
         }
 
         /* Monitor Specific Styles */
         #monitorStatusArea {
             text-align: center;
             margin-bottom: 25px;
-            padding: 25px;
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 12px;
             transition: background-color 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
         }
         .monitor-display {
-            font-size: 2.8em;
+            font-size: 3em;
             font-weight: bold;
             color: #fff;
-            padding: 20px 0;
-            border-radius: 8px;
+            padding: 25px 0;
+            border-radius: 10px;
             background-color: #28a745; /* Green for Normal */
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         #monitorStatusArea.status-abnormal .monitor-display {
             background-color: #dc3545; /* Red for Abnormal */
             animation: pulse-red 1.5s infinite;
         }
         #monitorAlertDetails {
-            margin-top: 18px;
+            margin-top: 20px;
             color: #ffdddd; /* Lighter red for details */
             font-weight: bold;
-            font-size: 1.15em;
+            font-size: 1.2em;
+            text-align: left;
+            padding-left: 10px;
         }
 
         @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.5); }
-            70% { box-shadow: 0 0 0 25px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.5); transform: scale(1); }
+            50% { box-shadow: 0 0 0 25px rgba(220, 53, 69, 0); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); transform: scale(1); }
         }
 
         /* Parameter Input Grid for Predict/Monitor */
         .param-input-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Larger min-width for inputs */
+            gap: 20px;
         }
         .param-input-grid .form-group {
             margin-bottom: 0;
@@ -221,22 +240,22 @@
         .suggestion-box {
             background-color: #222e3b; /* Darker background for suggestion */
             border: 1px solid #28a745; /* Green border for positive outcome */
-            padding: 22px;
-            margin-top: 25px;
-            border-radius: 10px;
-            box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.3);
+            padding: 25px;
+            margin-top: 30px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 12px rgba(46, 204, 113, 0.3);
             color: #d4e3ef;
         }
         .suggestion-box h4 {
             color: #2ecc71;
             margin-top: 0;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
         .suggestion-box pre {
             background-color: #1a222c; /* Even darker for code blocks */
             border: 1px solid #3c5066;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 15px;
+            border-radius: 8px;
             white-space: pre-wrap;
             word-break: break-word;
             font-family: 'Consolas', 'Courier New', monospace;
@@ -244,8 +263,8 @@
         }
         .prob-change {
             font-weight: bold;
-            margin-top: 18px;
-            font-size: 1.15em;
+            margin-top: 20px;
+            font-size: 1.2em;
         }
         .prob-change .value-ok { color: #2ecc71; }
         .prob-change .value-ng { color: #e74c3c; }
@@ -253,17 +272,17 @@
         /* Utility */
         .text-center { text-align: center; }
         .full-width { width: 100%; }
-        .flex-row-gap { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .flex-row-gap { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
         .spinner {
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-top: 3px solid #fff;
             border-radius: 50%;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             animation: spin 1s linear infinite;
             display: none; /* Hidden by default */
             vertical-align: middle;
-            margin-right: 5px; /* Space between spinner and text */
+            margin-right: 8px; /* Space between spinner and text */
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -280,8 +299,17 @@
 </head>
 <body>
     <div class="container">
-        <h1>智能玻璃质检系统 (IQCS)</h1>
+        <h1>广州福耀智能质检系统 (IQCS)</h1>
         <p class="text-center">福耀汽车前挡玻璃预处理产线 AI 赋能平台</p>
+
+        <!-- Flash messages from Flask -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <div class="main-content-grid">
             <!-- Left Column: Monitor & Craftsman -->
@@ -292,20 +320,19 @@
                     <p>实时监控工艺参数，提前预警异常波动。</p>
                     <div id="monitorStatusArea" class="monitor-display-wrapper">
                         <div class="monitor-display">
-                            <span id="monitorStatusText">等待监控...</span>
+                            <span id="monitorStatusText">{% if not model_ready %}模型未训练{% else %}等待监控...{% endif %}</span>
                         </div>
                         <div id="monitorAlertDetails" style="display: none;"></div>
                     </div>
                     <div class="param-input-grid mt-4">
-                        <div class="form-group"><label for="monitor_F_cut_act">刀头压力 (F_cut_act):</label><input type="number" id="monitor_F_cut_act" value="49" step="0.1"></div>
-                        <div class="form-group"><label for="monitor_v_cut_act">切割速度 (v_cut_act):</label><input type="number" id="monitor_v_cut_act" value="139" step="1"></div>
-                        <div class="form-group"><label for="monitor_F_break_peak">掰断力 (F_break_peak):</label><input type="number" id="monitor_F_break_peak" value="49" step="0.1"></div>
-                        <div class="form-group"><label for="monitor_v_wheel_act">砂轮速度 (v_wheel_act):</label><input type="number" id="monitor_v_wheel_act" value="15" step="1"></div>
-                        <div class="form-group"><label for="monitor_F_wheel_act">砂轮压力 (F_wheel_act):</label><input type="number" id="monitor_F_wheel_act" value="35" step="0.1"></div>
-                        <div class="form-group"><label for="monitor_P_cool_act">冷却液压力 (P_cool_act):</label><input type="number" id="monitor_P_cool_act" value="3" step="0.1"></div>
-                        <div class="form-group"><label for="monitor_t_glass_meas">玻璃厚度 (t_glass_meas):</label><input type="number" id="monitor_t_glass_meas" value="2.1" step="0.1"></div>
+                        {% for param_name, display_name in displayable_params %}
+                        <div class="form-group">
+                            <label for="monitor_{{ param_name }}">{{ display_name }}:</label>
+                            <input type="number" id="monitor_{{ param_name }}" value="{% if cache.feature_defaults and param_name in cache.feature_defaults %}{{ cache.feature_defaults[param_name]|round(2) }}{% else %}0{% endif %}" step="0.1">
+                        </div>
+                        {% endfor %}
                     </div>
-                    <button id="monitorProcessBtn" class="full-width mt-3" onclick="monitorProcess()">
+                    <button id="monitorProcessBtn" class="full-width mt-3" onclick="monitorProcess()" {% if not model_ready %}disabled{% endif %}>
                         <span class="spinner" id="monitorSpinner"></span> 启动实时监控
                     </button>
                     <div id="monitorResults" class="results-box" style="display: none;"></div>
@@ -319,7 +346,7 @@
                         <label for="partId">输入产品ID (Part_ID):</label>
                         <input type="text" id="partId" value="GLASS-MODEL-A001">
                     </div>
-                    <button id="recommendParametersBtn" class="full-width" onclick="recommendParameters()">
+                    <button id="recommendParametersBtn" class="full-width" onclick="recommendParameters()" {% if not model_ready %}disabled{% endif %}>
                         <span class="spinner" id="recommendSpinner"></span> 获取推荐参数
                     </button>
                     <div id="recommendResults" class="results-box" style="display: none;"></div>
@@ -342,8 +369,31 @@
                         </button>
                         <button id="hideTrainSectionBtn" style="display: none;" onclick="hideTrainSection()">隐藏此模块</button>
                     </div>
-                    <div id="trainResults" class="results-box" style="display: none;"></div>
-                    <div id="featureImportancePlot" class="image-container" style="display: none;"></div>
+                    <div id="trainResults" class="results-box" style="display: none;">
+                        {% if cache.filename %}
+                            <h3>训练结果概览 (基于文件: {{ cache.filename }})</h3>
+                            <pre>
+                                {% if cache.metrics %}
+                                    |指标|值|
+                                    |---|---|
+                                    |准确率 (Accuracy)|{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}|
+                                    |不合格品召回率 (Recall NG)|{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}|
+                                    |不合格品精确率 (Precision NG)|{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}|
+                                    |不合格品F1分数 (F1 NG)|{{ "%.3f"|format(cache.metrics.f1_ng) }}|
+                                {% else %}
+                                    无可用指标。
+                                {% endif %}
+                            </pre>
+                        {% else %}
+                            <p>尚未进行训练，请上传CSV文件。</p>
+                        {% endif %}
+                    </div>
+                    <div id="featureImportancePlot" class="image-container" style="display: none;">
+                        {% if cache.feature_plot %}
+                            <h3>特征重要性</h3>
+                            <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance Plot">
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Module 4: AI侦探 (Quality Prediction & Adjustment Suggestion) -->
@@ -351,15 +401,14 @@
                     <h2 class="section-header">4. AI侦探 (Quality Prediction & Adjustment Suggestion)</h2>
                     <p>输入当前玻璃的工艺参数，AI秒级诊断质量并提供调优建议。</p>
                     <div class="param-input-grid">
-                        <div class="form-group"><label for="predict_F_cut_act">刀头压力 (F_cut_act):</label><input type="number" id="predict_F_cut_act" value="49" step="0.1"></div>
-                        <div class="form-group"><label for="predict_v_cut_act">切割速度 (v_cut_act):</label><input type="number" id="predict_v_cut_act" value="139" step="1"></div>
-                        <div class="form-group"><label for="predict_F_break_peak">掰断力 (F_break_peak):</label><input type="number" id="predict_F_break_peak" value="49" step="0.1"></div>
-                        <div class="form-group"><label for="predict_v_wheel_act">砂轮速度 (v_wheel_act):</label><input type="number" id="predict_v_wheel_act" value="15" step="1"></div>
-                        <div class="form-group"><label for="predict_F_wheel_act">砂轮压力 (F_wheel_act):</label><input type="number" id="predict_F_wheel_act" value="35" step="0.1"></div>
-                        <div class="form-group"><label for="predict_P_cool_act">冷却液压力 (P_cool_act):</label><input type="number" id="predict_P_cool_act" value="3" step="0.1"></div>
-                        <div class="form-group"><label for="predict_t_glass_meas">玻璃厚度 (t_glass_meas):</label><input type="number" id="predict_t_glass_meas" value="2.1" step="0.1"></div>
+                        {% for param_name, display_name in displayable_params %}
+                        <div class="form-group">
+                            <label for="predict_{{ param_name }}">{{ display_name }}:</label>
+                            <input type="number" id="predict_{{ param_name }}" value="{% if cache.feature_defaults and param_name in cache.feature_defaults %}{{ cache.feature_defaults[param_name]|round(2) }}{% else %}0{% endif %}" step="0.1">
+                        </div>
+                        {% endfor %}
                     </div>
-                    <button id="predictQualityBtn" class="full-width mt-3" onclick="predictQuality()">
+                    <button id="predictQualityBtn" class="full-width mt-3" onclick="predictQuality()" {% if not model_ready %}disabled{% endif %}>
                         <span class="spinner" id="predictSpinner"></span> 诊断质量
                     </button>
                     <div id="predictResults" class="results-box" style="display: none;"></div>
@@ -377,21 +426,20 @@
 
     <script>
         // *** 请将此URL替换为您的实际Render.com后端服务URL ***
-        // 如果您在本地运行 app.py 进行开发测试，可以设置为 'http://127.0.0.1:5000'
-        const BASE_API_URL = 'https://g3-iqcs-live-demo.onrender.com'; 
+        // 由于Flask直接服务HTML和API，相对路径通常有效。
+        const BASE_API_URL = ''; // Keep empty for relative paths as Flask serves both
 
         let currentOriginalParams = null; // Store params for adjustment suggestion
         const TRAIN_SECTION_HIDDEN_KEY = 'trainSectionHidden'; // Key for localStorage
 
         // --- Helper Functions ---
-        // 修正了 spinner 获取方式，确保在按钮内部查找
         function toggleSpinner(buttonId, spinnerId, isLoading, buttonText) {
             const button = document.getElementById(buttonId);
             if (!button) {
                 console.error(`Error: Button with ID "${buttonId}" not found.`);
                 return;
             }
-            const spinner = button.querySelector(`#${spinnerId}`); // 确保spinner是按钮的子元素
+            const spinner = button.querySelector(`#${spinnerId}`); // Get spinner inside button
             if (!spinner) {
                 console.error(`Error: Spinner with ID "${spinnerId}" not found within button "${buttonId}".`);
                 return;
@@ -400,21 +448,12 @@
             if (isLoading) {
                 button.disabled = true;
                 spinner.style.display = 'inline-block';
-                // 更新按钮文本，保留 spinner 元素，只替换文本节点
-                const currentTextNode = Array.from(button.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-                if (currentTextNode) {
-                    currentTextNode.nodeValue = ` ${buttonText}`;
-                } else {
-                    button.appendChild(document.createTextNode(` ${buttonText}`));
-                }
-                
+                // Update button text content while keeping the spinner HTML element
+                button.innerHTML = `<span class="spinner" id="${spinnerId}" style="display: inline-block;"></span> ${buttonText}`;
             } else {
                 button.disabled = false;
                 spinner.style.display = 'none';
-                const currentTextNode = Array.from(button.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-                if (currentTextNode) {
-                    currentTextNode.nodeValue = ` ${buttonText}`;
-                }
+                button.innerHTML = `<span class="spinner" id="${spinnerId}" style="display: none;"></span> ${buttonText}`;
             }
         }
 
@@ -479,33 +518,25 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch(BASE_API_URL + '/api/train', { // 使用 BASE_API_URL
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
+                // For Flask flash messages and full page reload, we perform a standard form submission
+                const form = document.createElement('form');
+                form.action = BASE_API_URL + '/train'; // Target Flask's /train route
+                form.method = 'POST';
+                form.enctype = 'multipart/form-data';
+                form.style.display = 'none'; // Hide the form
 
-                if (response.ok) {
-                    let msg = `<h3>${result.message}</h3>`;
-                    msg += `<p><strong>模型性能:</strong></p>`;
-                    for (const key in result.performance) {
-                        if (typeof result.performance[key] === 'number') {
-                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${(result.performance[key] * 100).toFixed(2)}%</p>`;
-                        } else {
-                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${result.performance[key]}</p>`;
-                        }
-                    }
-                    displayMessage('trainResults', msg, true, 'status-ok');
-                    displayImage('featureImportancePlot', result.feature_importance_plot);
-                    document.getElementById('featureImportancePlot').style.display = 'block';
+                // Append file input to the new form
+                const fileInputClone = fileInput.cloneNode(true);
+                form.appendChild(fileInputClone);
 
-                    document.getElementById('hideTrainSectionBtn').style.display = 'inline-flex'; 
-                } else {
-                    displayMessage('trainResults', `训练失败: ${result.error}`, false, 'status-ng');
-                }
+                document.body.appendChild(form);
+                form.submit(); // Submit the form
+
+                // The page will reload after submission, so no further JS display needed here.
             } catch (error) {
+                // This catch might only be hit for network errors before submission
+                console.error("Error submitting form:", error);
                 displayMessage('trainResults', `网络或服务器错误: ${error}`, false, 'status-ng');
-            } finally {
                 toggleSpinner('trainModelBtn', 'trainSpinner', false, '开始训练模型'); 
             }
         }
@@ -518,12 +549,32 @@
 
         function checkTrainSectionVisibility() {
             const trainSection = document.getElementById('trainSection');
-            if (localStorage.getItem(TRAIN_SECTION_HIDDEN_KEY) === 'true') {
+            const modelReady = {{ model_ready | tojson }}; // Get model ready status from Jinja context
+            
+            // If model is already ready AND user previously hid it, keep it hidden
+            if (modelReady && localStorage.getItem(TRAIN_SECTION_HIDDEN_KEY) === 'true') {
                 trainSection.style.display = 'none';
             } else {
                 trainSection.style.display = 'block';
-                document.getElementById('hideTrainSectionBtn').style.display = 'none'; 
+                // Show hide button only if model is ready (meaning it has been trained)
+                if (modelReady) {
+                    document.getElementById('hideTrainSectionBtn').style.display = 'inline-flex'; 
+                } else {
+                    document.getElementById('hideTrainSectionBtn').style.display = 'none';
+                }
             }
+            // For initial state based on Jinja, show results if cache data exists
+            if ({{ cache.filename | tojson }}) {
+                document.getElementById('trainResults').style.display = 'block';
+            }
+            if ({{ cache.feature_plot | tojson }}) {
+                document.getElementById('featureImportancePlot').style.display = 'block';
+            }
+            
+            // Enable/disable other buttons based on model_ready status
+            document.getElementById('monitorProcessBtn').disabled = !modelReady;
+            document.getElementById('recommendParametersBtn').disabled = !modelReady;
+            document.getElementById('predictQualityBtn').disabled = !modelReady;
         }
         window.addEventListener('load', checkTrainSectionVisibility); 
 
@@ -535,7 +586,7 @@
             const params = getParameterInputs('monitor');
 
             try {
-                const response = await fetch(BASE_API_URL + '/api/monitor', { // 使用 BASE_API_URL
+                const response = await fetch(BASE_API_URL + '/api/process_monitor', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(params)
@@ -546,23 +597,23 @@
                 const monitorStatusArea = document.getElementById('monitorStatusArea');
                 const monitorAlertDetails = document.getElementById('monitorAlertDetails');
 
-                monitorStatusArea.classList.remove('status-abnormal'); 
+                monitorStatusArea.classList.remove('status-abnormal'); // Reset animation/color
                 monitorAlertDetails.style.display = 'none'; 
 
                 if (response.ok) {
-                    if (result.status === 'Abnormal') {
+                    if (result.status === 'abnormal') { 
                         monitorStatusArea.classList.add('status-abnormal');
                         monitorStatusText.textContent = '异常警告！';
                         let detailsHtml = '发现以下参数偏离黄金基线：<br>';
-                        result.details.forEach(detail => {
-                            detailsHtml += `- <strong>${detail.param}</strong>: 当前值 ${detail.current.toFixed(2)}, 正常范围 ${detail.range}<br>`;
+                        result.messages.forEach(msg => { 
+                            detailsHtml += `- ${msg}<br>`;
                         });
                         monitorAlertDetails.innerHTML = detailsHtml;
                         monitorAlertDetails.style.display = 'block';
-                        displayMessage('monitorResults', result.message, false, 'status-ng', true); 
+                        displayMessage('monitorResults', '异常详情请看上方区域', false, 'status-ng', true); 
                     } else {
                         monitorStatusText.textContent = '工艺参数稳定';
-                        displayMessage('monitorResults', result.message, false, 'status-ok', true);
+                        displayMessage('monitorResults', result.messages[0], false, 'status-ok', true);
                     }
                 } else {
                     monitorStatusText.textContent = '监控失败!';
@@ -592,10 +643,10 @@
             }
 
             try {
-                const response = await fetch(BASE_API_URL + '/api/recommend', { // 使用 BASE_API_URL
+                const response = await fetch(BASE_API_URL + '/api/recommend_params', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ Part_ID: partId })
+                    body: JSON.stringify({ product_id: partId }) 
                 });
                 const result = await response.json();
 
@@ -603,7 +654,7 @@
                     let msg = `<p>${result.message}</p>`;
                     msg += `<strong>推荐参数:</strong><br><pre>`;
                     for (const key in result.recommended_params) {
-                        msg += `- ${key}: ${result.recommended_params[key].toFixed(2)}\n`;
+                        msg += `- ${result.param_map[key] || key}: ${result.recommended_params[key].toFixed(2)}\n`; 
                     }
                     msg += `</pre>`;
                     displayMessage('recommendResults', msg, true, 'status-ok');
@@ -626,7 +677,7 @@
             currentOriginalParams = params; 
 
             try {
-                const response = await fetch(BASE_API_URL + '/api/predict', { // 使用 BASE_API_URL
+                const response = await fetch(BASE_API_URL + '/api/predict', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(params)
@@ -634,14 +685,23 @@
                 const result = await response.json();
 
                 let statusClass = '';
-                if (result.status === 'OK') statusClass = 'status-ok';
-                else if (result.status === 'NG') statusClass = 'status-ng';
-                else if (result.status === 'Warning') statusClass = 'status-warning';
+                if (result.status === 'ok') statusClass = 'status-ok';
+                else if (result.status === 'ng') statusClass = 'status-ng';
+                else if (result.status === 'warning') statusClass = 'status-warning';
                 
-                displayMessage('predictResults', `<strong class="status-message">状态: <span class="${statusClass}">${result.status}</span></strong><br>${result.message}`, true);
+                // Display verdict reasons as a list
+                let verdictHtml = '';
+                if (result.verdict_reason && result.verdict_reason.length > 0) {
+                    verdictHtml = result.verdict_reason.map(reason => `<p>${reason}</p>`).join('');
+                } else {
+                    verdictHtml = `<p>无详细诊断原因。</p>`;
+                }
 
-                if (result.status === 'NG') {
-                    displayImage('shapPlotContainer', result.shap_plot);
+                displayMessage('predictResults', `<strong>状态: <span class="${statusClass}">${result.status.toUpperCase()}</span></strong><br>${verdictHtml}`, true);
+
+
+                if (result.status === 'ng') {
+                    displayImage('shapPlotContainer', result.waterfall_plot); 
                     document.getElementById('shapPlotContainer').style.display = 'block';
                     if (result.show_suggestion_button) {
                         document.getElementById('getSuggestionBtn').style.display = 'inline-flex'; 
@@ -668,21 +728,34 @@
             }
 
             try {
-                const response = await fetch(BASE_API_URL + '/api/get_adjustment_suggestion', { // 使用 BASE_API_URL
+                const response = await fetch(BASE_API_URL + '/api/adjust', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ original_params: currentOriginalParams })
+                    body: JSON.stringify({ 
+                        input_data: currentOriginalParams, 
+                        shap_values: null // SHAP values are now re-computed on backend for adjustment logic
+                    })
                 });
                 const result = await response.json();
 
                 if (response.ok) {
                     let msg = `<h4>AI参数优化方案</h4>`;
-                    msg += `<pre>${result.suggestion}</pre>`;
-                    msg += `<p class="prob-change">调整前合格概率: <span class="value-ng">${(result.original_prob_ok * 100).toFixed(2)}%</span></p>`;
-                    let adjustedProbClass = result.is_adjusted_to_ok_threshold ? 'value-ok' : 'value-ng';
-                    msg += `<p class="prob-change">调整后预测合格概率: <span class="${adjustedProbClass}">${(result.adjusted_prob_ok * 100).toFixed(2)}%</span></p>`;
+                    if (result.adjustments && Object.keys(result.adjustments).length > 0) {
+                        for (const key in result.adjustments) {
+                            const adj = result.adjustments[key];
+                            const paramDisplayName = result.param_map[key] || key;
+                            msg += `<pre>- **${paramDisplayName}**: 原始值 ${adj.original_value.toFixed(2)}，建议调整至 ${adj.suggested_value.toFixed(2)}。<br>  (变化量: ${adj.change.toFixed(2)}, 预测合格概率提升: ${(adj.prob_increase * 100).toFixed(2)}%)</pre>`;
+                        }
+                    } else {
+                        msg += `<p>未能找到有效的参数调整建议。</p>`;
+                    }
                     
-                    if (result.is_adjusted_to_ok_threshold) {
+                    // Use model_cache['best_threshold'] from Jinja for client-side comparison
+                    const bestThreshold = {{ cache.best_threshold | tojson }};
+                    let adjustedProbClass = result.final_prob_after_adjustment >= bestThreshold ? 'value-ok' : 'value-ng';
+                    msg += `<p class="prob-change">调整后预测合格概率: <span class="${adjustedProbClass}">${(result.final_prob_after_adjustment * 100).toFixed(2)}%</span></p>`;
+                    
+                    if (result.final_prob_after_adjustment >= bestThreshold) {
                         msg += `<p class="status-ok mt-3">✅ 预测调整后可达到合格标准。</p>`;
                     } else {
                         msg += `<p class="status-ng mt-3">❌ 预测调整后仍未达到合格标准，可能需要进一步调优或专家干预。</p>`;
