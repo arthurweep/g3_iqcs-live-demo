@@ -5,40 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>广州福耀智能质检系统 (IQCS)</title>
     <style>
+        /* General Styles */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f4f7f6;
+            margin: 0;
+            background-color: #eef2f5; /* Light greyish-blue background */
             color: #333;
             line-height: 1.6;
         }
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
+            max-width: 1280px;
+            margin: 20px auto;
+            background-color: #ffffff;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
         }
         h1, h2, h3 {
             color: #2c3e50;
-            border-bottom: 2px solid #ecf0f1;
+            border-bottom: 2px solid #e0e6ec;
             padding-bottom: 10px;
-            margin-top: 30px;
+            margin-top: 25px;
+            margin-bottom: 20px;
         }
-        h2 {
-            font-size: 1.8em;
-        }
-        h3 {
-            font-size: 1.4em;
-        }
+        h1 { font-size: 2.2em; text-align: center; margin-bottom: 30px; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.4em; }
+
+        /* Section Styling */
         .section {
-            margin-bottom: 40px;
-            padding: 20px;
-            background-color: #fdfdfd;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #fcfdfe;
+            border: 1px solid #e7ecef;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
+        .section-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        /* Form Elements */
         .form-group {
             margin-bottom: 15px;
         }
@@ -47,55 +57,79 @@
             margin-bottom: 5px;
             font-weight: bold;
             color: #555;
+            font-size: 0.95em;
         }
         input[type="file"],
         input[type="text"],
-        input[type="number"],
-        button {
-            padding: 10px 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 1em;
-            width: calc(100% - 22px);
-            box-sizing: border-box;
-            margin-top: 5px;
-        }
-        input[type="text"],
         input[type="number"] {
-            width: 200px; /* Adjust width for parameter inputs */
+            padding: 10px 12px;
+            border: 1px solid #cdd4da;
+            border-radius: 5px;
+            font-size: 1em;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
+        input[type="file"]:focus,
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
         button {
+            padding: 12px 25px;
             background-color: #3498db;
             color: white;
             border: none;
+            border-radius: 5px;
+            font-size: 1em;
             cursor: pointer;
-            transition: background-color 0.3s ease;
-            width: auto;
-            min-width: 120px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         button:hover {
             background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
         }
         button:disabled {
-            background-color: #95a5a6;
+            background-color: #cccccc;
             cursor: not-allowed;
+            transform: none;
         }
+
+        /* Layout Grid */
+        .main-content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two columns */
+            gap: 30px; /* Space between columns */
+        }
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Results Display */
         .results-box {
             background-color: #ecf0f1;
             border: 1px solid #bdc3c7;
-            border-radius: 4px;
+            border-radius: 6px;
             padding: 15px;
             margin-top: 20px;
-            white-space: pre-wrap; /* Preserve whitespace and line breaks */
-            word-wrap: break-word; /* Break long words */
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 0.9em;
-            max-height: 500px;
+            font-size: 0.95em;
+            max-height: 400px;
             overflow-y: auto;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            word-break: break-word; /* Break long words */
         }
-        .status-ok { color: green; font-weight: bold; }
-        .status-ng { color: red; font-weight: bold; }
-        .status-warning { color: orange; font-weight: bold; }
         .image-container {
             text-align: center;
             margin-top: 20px;
@@ -104,183 +138,288 @@
             max-width: 100%;
             height: auto;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 5px;
         }
+
+        /* Status Colors & Indicators */
+        .status-ok { background-color: #d4edda; color: #155724; border-color: #c3e6cb; padding: 10px; border-radius: 5px; }
+        .status-ng { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; padding: 10px; border-radius: 5px; }
+        .status-warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; padding: 10px; border-radius: 5px; }
+
+        /* Monitor Specific Styles */
+        #monitorStatusArea {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        .monitor-display {
+            font-size: 2.5em; /* Larger font for status */
+            font-weight: bold;
+            color: #fff;
+            padding: 15px 0;
+            border-radius: 5px;
+            background-color: #28a745; /* Default Green for Normal */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        #monitorStatusArea.status-abnormal .monitor-display {
+            background-color: #dc3545; /* Red for Abnormal */
+            animation: pulse-red 1.5s infinite; /* Add a pulse animation */
+        }
+        #monitorAlertDetails {
+            margin-top: 15px;
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        /* Parameter Input Grid for Predict/Monitor */
         .param-input-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            margin-bottom: 20px;
         }
         .param-input-grid .form-group {
-            margin-bottom: 0;
+            margin-bottom: 0; /* Remove extra margin */
         }
-        .button-group {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
+
+        /* Adjustment Suggestion */
         .suggestion-box {
             background-color: #e8f5e9;
             border: 1px solid #a5d6a7;
-            padding: 15px;
-            margin-top: 20px;
+            padding: 20px;
+            margin-top: 25px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 8px rgba(165, 214, 167, 0.3);
+        }
+        .suggestion-box h4 {
+            color: #2e7d32;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .suggestion-box pre {
+            background-color: #f0fdf2;
+            border: 1px solid #c8e6c9;
+            padding: 10px;
             border-radius: 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         .prob-change {
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 15px;
+            font-size: 1.1em;
+        }
+        .prob-change .value-ok { color: #28a745; }
+        .prob-change .value-ng { color: #dc3545; }
+        
+        /* Utility */
+        .text-center { text-align: center; }
+        .full-width { width: 100%; }
+        .flex-row-gap { display: flex; gap: 10px; flex-wrap: wrap; }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Media Queries for Responsiveness */
+        @media (max-width: 992px) {
+            .main-content-grid {
+                grid-template-columns: 1fr; /* Single column layout on smaller screens */
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>广州福耀智能质检系统 (IQCS)</h1>
-        <p>欢迎使用智能质检系统。本系统旨在通过AI技术，实现玻璃预处理产线的质量优化和管理。</p>
+        <h1>智能玻璃质检系统 (IQCS)</h1>
+        <p class="text-center">福耀汽车前挡玻璃预处理产线 AI 赋能平台</p>
 
-        <div class="section">
-            <h2>1. 模型训练与管理</h2>
-            <p>上传历史生产数据 (CSV文件)，训练AI模型。</p>
-            <div class="form-group">
-                <label for="csvFile">上传 CSV 文件:</label>
-                <input type="file" id="csvFile" accept=".csv">
+        <div class="main-content-grid">
+            <!-- Left Column: Monitor & Craftsman -->
+            <div class="column left-column">
+                <!-- Module 2: 产线心电图 (Process Monitor) -->
+                <div class="section" id="monitorSection">
+                    <h2 class="section-header">2. 产线心电图 (Process Monitor)</h2>
+                    <p>实时监控工艺参数，提前预警异常波动。</p>
+                    <div id="monitorStatusArea" class="monitor-display-wrapper">
+                        <div class="monitor-display">
+                            <span id="monitorStatusText">等待监控...</span>
+                        </div>
+                        <div id="monitorAlertDetails" style="display: none;"></div>
+                    </div>
+                    <div class="param-input-grid mt-4">
+                        <div class="form-group"><label for="monitor_F_cut_act">刀头压力 (F_cut_act):</label><input type="number" id="monitor_F_cut_act" value="49" step="0.1"></div>
+                        <div class="form-group"><label for="monitor_v_cut_act">切割速度 (v_cut_act):</label><input type="number" id="monitor_v_cut_act" value="139" step="1"></div>
+                        <div class="form-group"><label for="monitor_F_break_peak">掰断力 (F_break_peak):</label><input type="number" id="monitor_F_break_peak" value="49" step="0.1"></div>
+                        <div class="form-group"><label for="monitor_v_wheel_act">砂轮速度 (v_wheel_act):</label><input type="number" id="monitor_v_wheel_act" value="15" step="1"></div>
+                        <div class="form-group"><label for="monitor_F_wheel_act">砂轮压力 (F_wheel_act):</label><input type="number" id="monitor_F_wheel_act" value="35" step="0.1"></div>
+                        <div class="form-group"><label for="monitor_P_cool_act">冷却液压力 (P_cool_act):</label><input type="number" id="monitor_P_cool_act" value="3" step="0.1"></div>
+                        <div class="form-group"><label for="monitor_t_glass_meas">玻璃厚度 (t_glass_meas):</label><input type="number" id="monitor_t_glass_meas" value="2.1" step="0.1"></div>
+                    </div>
+                    <button class="full-width mt-3" onclick="monitorProcess()">
+                        <span class="spinner" id="monitorSpinner"></span> 启动实时监控
+                    </button>
+                    <div id="monitorResults" class="results-box" style="display: none;"></div>
+                </div>
+
+                <!-- Module 3: AI工艺员 (AI Craftsman) -->
+                <div class="section" id="craftsmanSection">
+                    <h2 class="section-header">3. AI工艺员 (AI Craftsman)</h2>
+                    <p>根据产品ID，推荐最优初始工艺参数，加速产线调试。</p>
+                    <div class="form-group">
+                        <label for="partId">输入产品ID (Part_ID):</label>
+                        <input type="text" id="partId" value="GLASS-MODEL-A001">
+                    </div>
+                    <button class="full-width" onclick="recommendParameters()">
+                        <span class="spinner" id="recommendSpinner"></span> 获取推荐参数
+                    </button>
+                    <div id="recommendResults" class="results-box" style="display: none;"></div>
+                </div>
             </div>
-            <button onclick="trainModel()">开始训练模型</button>
-            <div id="trainResults" class="results-box"></div>
-            <div id="featureImportancePlot" class="image-container"></div>
+
+            <!-- Right Column: Train & Detective -->
+            <div class="column right-column">
+                <!-- Module 1: 模型训练与管理 -->
+                <div class="section" id="trainSection">
+                    <h2 class="section-header">1. 模型训练与管理</h2>
+                    <p>上传包含历史生产参数和质检结果(OK/NG)的CSV文件，训练/更新AI模型。</p>
+                    <div class="form-group">
+                        <label for="csvFile">选择 CSV 文件:</label>
+                        <input type="file" id="csvFile" accept=".csv">
+                    </div>
+                    <div class="flex-row-gap">
+                        <button onclick="trainModel()">
+                            <span class="spinner" id="trainSpinner"></span> 开始训练模型
+                        </button>
+                        <button onclick="hideTrainSection()" id="hideTrainSectionBtn" style="display: none;">隐藏此模块</button>
+                    </div>
+                    <div id="trainResults" class="results-box" style="display: none;"></div>
+                    <div id="featureImportancePlot" class="image-container" style="display: none;"></div>
+                </div>
+
+                <!-- Module 4: AI侦探 (Quality Prediction & Adjustment Suggestion) -->
+                <div class="section" id="detectiveSection">
+                    <h2 class="section-header">4. AI侦探 (Quality Prediction & Adjustment Suggestion)</h2>
+                    <p>输入当前玻璃的工艺参数，AI秒级诊断质量并提供调优建议。</p>
+                    <div class="param-input-grid">
+                        <div class="form-group"><label for="predict_F_cut_act">刀头压力 (F_cut_act):</label><input type="number" id="predict_F_cut_act" value="49" step="0.1"></div>
+                        <div class="form-group"><label for="predict_v_cut_act">切割速度 (v_cut_act):</label><input type="number" id="predict_v_cut_act" value="139" step="1"></div>
+                        <div class="form-group"><label for="predict_F_break_peak">掰断力 (F_break_peak):</label><input type="number" id="predict_F_break_peak" value="49" step="0.1"></div>
+                        <div class="form-group"><label for="predict_v_wheel_act">砂轮速度 (v_wheel_act):</label><input type="number" id="predict_v_wheel_act" value="15" step="1"></div>
+                        <div class="form-group"><label for="predict_F_wheel_act">砂轮压力 (F_wheel_act):</label><input type="number" id="predict_F_wheel_act" value="35" step="0.1"></div>
+                        <div class="form-group"><label for="predict_P_cool_act">冷却液压力 (P_cool_act):</label><input type="number" id="predict_P_cool_act" value="3" step="0.1"></div>
+                        <div class="form-group"><label for="predict_t_glass_meas">玻璃厚度 (t_glass_meas):</label><input type="number" id="predict_t_glass_meas" value="2.1" step="0.1"></div>
+                        <!-- Add more predict parameters here matching app.py's expectations -->
+                    </div>
+                    <button class="full-width mt-3" onclick="predictQuality()">
+                        <span class="spinner" id="predictSpinner"></span> 诊断质量
+                    </button>
+                    <div id="predictResults" class="results-box" style="display: none;"></div>
+                    <div id="shapPlotContainer" class="image-container" style="display: none;"></div>
+                    <div class="text-center mt-4">
+                        <button id="getSuggestionBtn" style="display: none;" onclick="getAdjustmentSuggestion()">
+                            <span class="spinner" id="suggestionSpinner"></span> 获取AI参数调优建议
+                        </button>
+                    </div>
+                    <div id="adjustmentSuggestionResults" class="suggestion-box" style="display: none;"></div>
+                </div>
+            </div>
         </div>
-
-        <div class="section">
-            <h2>2. 产线心电图 (Process Monitor)</h2>
-            <p>实时监控工艺参数是否在“黄金工艺基线”范围内，提前预警异常波动。</p>
-            <div class="param-input-grid">
-                <!-- 示例参数，请根据实际情况添加更多参数 -->
-                <div class="form-group">
-                    <label for="monitor_F_cut_act">刀头压力 (F_cut_act):</label>
-                    <input type="number" id="monitor_F_cut_act" value="10.5" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="monitor_v_cut_act">切割速度 (v_cut_act):</label>
-                    <input type="number" id="monitor_v_cut_act" value="150" step="1">
-                </div>
-                <div class="form-group">
-                    <label for="monitor_F_break_peak">掰边力峰值 (F_break_peak):</label>
-                    <input type="number" id="monitor_F_break_peak" value="25" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="monitor_t_glass_meas">玻璃厚度 (t_glass_meas):</label>
-                    <input type="number" id="monitor_t_glass_meas" value="2.1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="monitor_grinding_speed">磨削速度 (grinding_speed):</label>
-                    <input type="number" id="monitor_grinding_speed" value="80" step="1">
-                </div>
-                <!-- 更多参数... -->
-            </div>
-            <button onclick="monitorProcess()">开始监控</button>
-            <div id="monitorResults" class="results-box"></div>
-        </div>
-
-        <div class="section">
-            <h2>3. AI工艺员 (Recommended Parameters)</h2>
-            <p>根据产品ID推荐最佳开机参数，缩短调试周期。</p>
-            <div class="form-group">
-                <label for="partId">产品ID (Part_ID):</label>
-                <input type="text" id="partId" value="ABC-12345">
-            </div>
-            <button onclick="recommendParameters()">获取推荐参数</button>
-            <div id="recommendResults" class="results-box"></div>
-        </div>
-
-        <div class="section">
-            <h2>4. AI侦探 (Quality Prediction & Adjustment Suggestion)</h2>
-            <p>输入当前生产参数，AI秒级诊断质量问题并提供调优建议。</p>
-            <div class="param-input-grid">
-                <!-- 示例参数，请根据实际情况添加更多参数 -->
-                <div class="form-group">
-                    <label for="predict_F_cut_act">刀头压力 (F_cut_act):</label>
-                    <input type="number" id="predict_F_cut_act" value="10.5" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="predict_v_cut_act">切割速度 (v_cut_act):</label>
-                    <input type="number" id="predict_v_cut_act" value="150" step="1">
-                </div>
-                <div class="form-group">
-                    <label for="predict_F_break_peak">掰边力峰值 (F_break_peak):</label>
-                    <input type="number" id="predict_F_break_peak" value="25" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="predict_t_glass_meas">玻璃厚度 (t_glass_meas):</label>
-                    <input type="number" id="predict_t_glass_meas" value="2.1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="predict_grinding_speed">磨削速度 (grinding_speed):</label>
-                    <input type="number" id="predict_grinding_speed" value="80" step="1">
-                </div>
-                <!-- 更多参数，确保名称与 app.py 中的 features 列表一致 -->
-            </div>
-            <button onclick="predictQuality()">诊断质量</button>
-            <div id="predictResults" class="results-box"></div>
-            <div id="shapPlotContainer" class="image-container"></div>
-            <div class="button-group" id="suggestionButtonGroup" style="display: none;">
-                <button onclick="getAdjustmentSuggestion()">获取调优建议</button>
-            </div>
-            <div id="adjustmentSuggestionResults" class="suggestion-box" style="display: none;"></div>
-        </div>
-
     </div>
 
     <script>
-        // 用于存储从 /api/predict 获得的原始参数，供后续调优建议使用
-        let currentOriginalParams = null; 
+        let currentOriginalParams = null; // Store params for adjustment suggestion
+        const TRAIN_SECTION_HIDDEN_KEY = 'trainSectionHidden'; // Key for localStorage
 
-        // --- 通用函数 ---
-        function displayMessage(elementId, message, isHtml = false, className = '') {
+        // --- Helper Functions ---
+        function toggleSpinner(buttonId, spinnerId, isLoading, buttonText) {
+            const button = document.getElementById(buttonId);
+            const spinner = button.querySelector(`#${spinnerId}`); // Get spinner inside button
+            if (!button || !spinner) return; // Safeguard
+
+            if (isLoading) {
+                button.disabled = true;
+                spinner.style.display = 'inline-block';
+                button.childNodes[button.childNodes.length - 1].nodeValue = ` ${buttonText}`; // Update text after spinner
+            } else {
+                button.disabled = false;
+                spinner.style.display = 'none';
+                button.childNodes[button.childNodes.length - 1].nodeValue = ` ${buttonText}`;
+            }
+        }
+
+        function displayMessage(elementId, message, isHtml = false, className = '', display = true) {
             const element = document.getElementById(elementId);
             if (isHtml) {
                 element.innerHTML = message;
             } else {
                 element.textContent = message;
             }
-            element.className = 'results-box ' + className; // Reset and apply class
+            element.className = `results-box ${className}`; // Apply styling classes
+            element.style.display = display ? 'block' : 'none';
         }
 
-        function clearResults(elementId) {
-            const element = document.getElementById(elementId);
-            element.innerHTML = '';
-            element.className = 'results-box'; // Reset class
-        }
-
-        function displayImage(elementId, base64Image) {
-            const container = document.getElementById(elementId);
-            container.innerHTML = ''; // Clear previous image
-            if (base64Image) {
-                const img = document.createElement('img');
-                img.src = 'data:image/png;base64,' + base64Image;
-                container.appendChild(img);
+        function clearSectionResults(sectionId) {
+            const section = document.getElementById(sectionId);
+            const resultBoxes = section.querySelectorAll('.results-box, .image-container, .suggestion-box');
+            resultBoxes.forEach(box => {
+                box.style.display = 'none';
+                box.innerHTML = '';
+            });
+            
+            // Specific elements to clear/hide for AI Detective
+            if (sectionId === 'detectiveSection') {
+                document.getElementById('getSuggestionBtn').style.display = 'none';
+                currentOriginalParams = null; // Clear stored parameters
+            }
+            // Specific elements to clear/hide for Monitor
+            if (sectionId === 'monitorSection') {
+                 document.getElementById('monitorStatusArea').className = 'monitor-display-wrapper';
+                 document.getElementById('monitorStatusText').textContent = '等待监控...';
+                 document.getElementById('monitorAlertDetails').style.display = 'none';
+                 document.getElementById('monitorAlertDetails').innerHTML = '';
             }
         }
 
         function getParameterInputs(prefix) {
-            const inputs = document.querySelectorAll(`#${prefix}_F_cut_act, #${prefix}_v_cut_act, #${prefix}_F_break_peak, #${prefix}_t_glass_meas, #${prefix}_grinding_speed`);
             const params = {};
-            inputs.forEach(input => {
-                // Remove prefix to get actual parameter name
+            // Collect all number inputs starting with the prefix in their ID
+            document.querySelectorAll(`input[type="number"][id^="${prefix}_"]`).forEach(input => {
                 const paramName = input.id.replace(`${prefix}_`, ''); 
                 params[paramName] = parseFloat(input.value);
             });
             return params;
         }
 
-        // --- 模块 1: 模型训练 ---
+        // --- Module 1: Train Model ---
         async function trainModel() {
-            clearResults('trainResults');
-            displayImage('featureImportancePlot', null);
+            clearSectionResults('trainSection');
+            toggleSpinner('trainModel', 'trainSpinner', true, '正在训练模型...');
+
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
 
             if (!file) {
                 displayMessage('trainResults', '请选择一个CSV文件！', false, 'status-ng');
+                toggleSpinner('trainModel', 'trainSpinner', false, '开始训练模型');
                 return;
             }
 
@@ -306,17 +445,43 @@
                     }
                     displayMessage('trainResults', msg, true, 'status-ok');
                     displayImage('featureImportancePlot', result.feature_importance_plot);
+                    document.getElementById('featureImportancePlot').style.display = 'block';
+
+                    // After successful training, show the hide button
+                    document.getElementById('hideTrainSectionBtn').style.display = 'inline-flex'; 
                 } else {
                     displayMessage('trainResults', `训练失败: ${result.error}`, false, 'status-ng');
                 }
             } catch (error) {
                 displayMessage('trainResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            } finally {
+                toggleSpinner('trainModel', 'trainSpinner', false, '开始训练模型');
             }
         }
 
-        // --- 模块 2: 产线心电图 ---
+        function hideTrainSection() {
+            const trainSection = document.getElementById('trainSection');
+            trainSection.style.display = 'none';
+            localStorage.setItem(TRAIN_SECTION_HIDDEN_KEY, 'true'); // Save state
+        }
+
+        function checkTrainSectionVisibility() {
+            const trainSection = document.getElementById('trainSection');
+            if (localStorage.getItem(TRAIN_SECTION_HIDDEN_KEY) === 'true') {
+                trainSection.style.display = 'none';
+            } else {
+                trainSection.style.display = 'block';
+                // If it's visible on load, the hide button should only appear after a successful train
+                document.getElementById('hideTrainSectionBtn').style.display = 'none'; 
+            }
+        }
+        window.addEventListener('load', checkTrainSectionVisibility); 
+
+        // --- Module 2: Process Monitor ---
         async function monitorProcess() {
-            clearResults('monitorResults');
+            clearSectionResults('monitorSection');
+            toggleSpinner('monitorProcess', 'monitorSpinner', true, '启动实时监控...');
+
             const params = getParameterInputs('monitor');
 
             try {
@@ -327,29 +492,52 @@
                 });
                 const result = await response.json();
 
+                const monitorStatusText = document.getElementById('monitorStatusText');
+                const monitorStatusArea = document.getElementById('monitorStatusArea');
+                const monitorAlertDetails = document.getElementById('monitorAlertDetails');
+
+                monitorStatusArea.classList.remove('status-abnormal'); // Reset class
+                monitorAlertDetails.style.display = 'none'; // Hide details by default
+
                 if (response.ok) {
                     if (result.status === 'Abnormal') {
-                        let msg = `<span class="status-warning">${result.message}</span><br>`;
-                        msg += `<strong>详情:</strong><br>${result.details.join('<br>')}`;
-                        displayMessage('monitorResults', msg, true, 'status-warning');
+                        monitorStatusArea.classList.add('status-abnormal');
+                        monitorStatusText.textContent = '异常警告！';
+                        let detailsHtml = '发现以下参数偏离黄金基线：<br>';
+                        result.details.forEach(detail => {
+                            detailsHtml += `- <strong>${detail.param}</strong>: 当前值 ${detail.current.toFixed(2)}, 正常范围 ${detail.range}<br>`;
+                        });
+                        monitorAlertDetails.innerHTML = detailsHtml;
+                        monitorAlertDetails.style.display = 'block';
+                        displayMessage('monitorResults', result.message, false, 'status-ng', true); 
                     } else {
-                        displayMessage('monitorResults', result.message, false, 'status-ok');
+                        monitorStatusText.textContent = '工艺参数稳定';
+                        displayMessage('monitorResults', result.message, false, 'status-ok', true);
                     }
                 } else {
-                    displayMessage('monitorResults', `监控失败: ${result.error}`, false, 'status-ng');
+                    monitorStatusText.textContent = '监控失败!';
+                    monitorStatusArea.classList.add('status-abnormal');
+                    displayMessage('monitorResults', `监控失败: ${result.error}`, false, 'status-ng', true);
                 }
             } catch (error) {
-                displayMessage('monitorResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+                monitorStatusText.textContent = '网络错误!';
+                monitorStatusArea.classList.add('status-abnormal');
+                displayMessage('monitorResults', `网络或服务器错误: ${error}`, false, 'status-ng', true);
+            } finally {
+                toggleSpinner('monitorProcess', 'monitorSpinner', false, '启动实时监控');
             }
         }
 
-        // --- 模块 3: AI工艺员 ---
+        // --- Module 3: AI Craftsman ---
         async function recommendParameters() {
-            clearResults('recommendResults');
+            clearSectionResults('craftsmanSection');
+            toggleSpinner('recommendParameters', 'recommendSpinner', true, '正在获取...');
+
             const partId = document.getElementById('partId').value;
 
             if (!partId) {
                 displayMessage('recommendResults', '请输入产品ID！', false, 'status-ng');
+                toggleSpinner('recommendParameters', 'recommendSpinner', false, '获取推荐参数');
                 return;
             }
 
@@ -363,28 +551,29 @@
 
                 if (response.ok) {
                     let msg = `<p>${result.message}</p>`;
-                    msg += `<strong>推荐参数:</strong><br>`;
+                    msg += `<strong>推荐参数:</strong><br><pre>`;
                     for (const key in result.recommended_params) {
-                        msg += `- ${key}: ${result.recommended_params[key].toFixed(2)}<br>`;
+                        msg += `- ${key}: ${result.recommended_params[key].toFixed(2)}\n`;
                     }
+                    msg += `</pre>`;
                     displayMessage('recommendResults', msg, true, 'status-ok');
                 } else {
                     displayMessage('recommendResults', `推荐失败: ${result.error}`, false, 'status-ng');
                 }
             } catch (error) {
                 displayMessage('recommendResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            } finally {
+                toggleSpinner('recommendParameters', 'recommendSpinner', false, '获取推荐参数');
             }
         }
 
-        // --- 模块 4: AI侦探 (核心修改部分) ---
+        // --- Module 4: AI Detective ---
         async function predictQuality() {
-            clearResults('predictResults');
-            displayImage('shapPlotContainer', null);
-            document.getElementById('suggestionButtonGroup').style.display = 'none';
-            document.getElementById('adjustmentSuggestionResults').style.display = 'none';
+            clearSectionResults('detectiveSection'); 
+            toggleSpinner('predictQuality', 'predictSpinner', true, '正在诊断...');
 
             const params = getParameterInputs('predict');
-            currentOriginalParams = params; // 存储原始参数
+            currentOriginalParams = params; // Store raw input params for potential later suggestion
 
             try {
                 const response = await fetch('/api/predict', {
@@ -394,42 +583,37 @@
                 });
                 const result = await response.json();
 
-                if (response.ok) {
-                    let statusClass = '';
-                    if (result.status === 'OK') {
-                        statusClass = 'status-ok';
-                    } else if (result.status === 'NG') {
-                        statusClass = 'status-ng';
-                    } else if (result.status === 'Warning') {
-                        statusClass = 'status-warning';
-                    }
-                    
-                    displayMessage('predictResults', `状态: <span class="${statusClass}">${result.status}</span><br>${result.message}`, true);
+                let statusClass = '';
+                if (result.status === 'OK') statusClass = 'status-ok';
+                else if (result.status === 'NG') statusClass = 'status-ng';
+                else if (result.status === 'Warning') statusClass = 'status-warning';
+                
+                displayMessage('predictResults', `<strong>状态: <span class="${statusClass}">${result.status}</span></strong><br>${result.message}`, true);
 
-                    if (result.status === 'NG') {
-                        displayImage('shapPlotContainer', result.shap_plot);
-                        if (result.show_suggestion_button) {
-                            document.getElementById('suggestionButtonGroup').style.display = 'flex'; // 显示按钮组
-                            currentOriginalParams = result.original_params; // 存储服务器返回的原始参数（包含处理后的派生特征）
-                        }
+                if (result.status === 'NG') {
+                    displayImage('shapPlotContainer', result.shap_plot);
+                    document.getElementById('shapPlotContainer').style.display = 'block';
+                    if (result.show_suggestion_button) {
+                        document.getElementById('getSuggestionBtn').style.display = 'inline-flex'; // Show suggestion button
                     }
-
-                } else {
-                    displayMessage('predictResults', `诊断失败: ${result.error}`, false, 'status-ng');
                 }
+
             } catch (error) {
                 displayMessage('predictResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            } finally {
+                toggleSpinner('predictQuality', 'predictSpinner', false, '诊断质量');
             }
         }
 
-        // 新增：获取调优建议的函数
+        // New: Get Adjustment Suggestion
         async function getAdjustmentSuggestion() {
-            const adjustmentSuggestionResults = document.getElementById('adjustmentSuggestionResults');
-            adjustmentSuggestionResults.style.display = 'block'; // 显示建议框
-            adjustmentSuggestionResults.innerHTML = '正在计算调优建议...'; // 提示用户正在处理
+            toggleSpinner('getSuggestionBtn', 'suggestionSpinner', true, '正在计算建议...');
+            document.getElementById('adjustmentSuggestionResults').style.display = 'block';
+            document.getElementById('adjustmentSuggestionResults').innerHTML = '<p>正在分析并生成调优建议...</p>';
 
             if (!currentOriginalParams) {
-                adjustmentSuggestionResults.innerHTML = '<span class="status-ng">错误：未找到原始参数进行调优。请先进行质量诊断。</span>';
+                document.getElementById('adjustmentSuggestionResults').innerHTML = '<p class="status-ng">错误：未找到原始参数进行调优。请先进行质量诊断。</p>';
+                toggleSpinner('getSuggestionBtn', 'suggestionSpinner', false, '获取AI参数调优建议');
                 return;
             }
 
@@ -442,24 +626,38 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    let msg = `<p><strong>调优建议:</strong><br>${result.suggestion.replace(/\n/g, '<br>')}</p>`;
-                    let probClass = result.is_adjusted_ok ? 'status-ok' : 'status-ng';
-                    msg += `<p class="prob-change">调整前合格概率: ${(result.original_prob_ok * 100).toFixed(2)}%</p>`;
-                    msg += `<p class="prob-change">调整后预测合格概率: <span class="${probClass}">${(result.adjusted_prob_ok * 100).toFixed(2)}%</span></p>`;
-                    if (result.is_adjusted_ok) {
-                        msg += `<p class="status-ok">预测调整后可达到合格标准。</p>`;
+                    let msg = `<h4>AI参数优化方案</h4>`;
+                    msg += `<pre>${result.suggestion}</pre>`;
+                    msg += `<p class="prob-change">调整前合格概率: <span class="value-ng">${(result.original_prob_ok * 100).toFixed(2)}%</span></p>`;
+                    let adjustedProbClass = result.is_adjusted_to_ok_threshold ? 'value-ok' : 'value-ng';
+                    msg += `<p class="prob-change">调整后预测合格概率: <span class="${adjustedProbClass}">${(result.adjusted_prob_ok * 100).toFixed(2)}%</span></p>`;
+                    
+                    if (result.is_adjusted_to_ok_threshold) {
+                        msg += `<p class="status-ok mt-3">✅ 预测调整后可达到合格标准。</p>`;
                     } else {
-                        msg += `<p class="status-ng">预测调整后仍未达到合格标准，可能需要进一步调优。</p>`;
+                        msg += `<p class="status-ng mt-3">❌ 预测调整后仍未达到合格标准，可能需要进一步调优或专家干预。</p>`;
                     }
-                    adjustmentSuggestionResults.innerHTML = msg;
+                    document.getElementById('adjustmentSuggestionResults').innerHTML = msg;
                 } else {
-                    adjustmentSuggestionResults.innerHTML = `<span class="status-ng">获取调优建议失败: ${result.error}</span>`;
+                    document.getElementById('adjustmentSuggestionResults').innerHTML = `<p class="status-ng">获取调优建议失败: ${result.error}</p>`;
                 }
             } catch (error) {
-                adjustmentSuggestionResults.innerHTML = `<span class="status-ng">网络或服务器错误: ${error}</span>`;
+                document.getElementById('adjustmentSuggestionResults').innerHTML = `<p class="status-ng">网络或服务器错误: ${error}</p>`;
+            } finally {
+                toggleSpinner('getSuggestionBtn', 'suggestionSpinner', false, '获取AI参数调优建议');
             }
         }
 
+        // --- Image Display Helper ---
+        function displayImage(elementId, base64Image) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            if (base64Image) {
+                const img = document.createElement('img');
+                img.src = 'data:image/png;base64,' + base64Image;
+                container.appendChild(img);
+            }
+        }
     </script>
 </body>
 </html>
