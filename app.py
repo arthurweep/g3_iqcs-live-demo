@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import shap
 import xgboost as xgb
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 # 配置matplotlib字体为中文，并兼容云端环境（推荐在云端部署时安装中文字体或使用英文）
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial', 'DejaVu Sans', 'sans-serif']
@@ -25,7 +24,7 @@ PARAM_MAP = {
     "product_id": "产品ID",
     "F_cut_act": "刀头实际压力 (N)",
     "v_cut_act": "切割实际速度 (mm/s)",
-    "F_break_peak": "掰断力峰值 (N)", # Changed from "崩边力峰值" to be consistent with previous context
+    "F_break_peak": "掰断力峰值 (N)",
     "v_wheel_act": "磨轮线速度 (m/s)",
     "F_wheel_act": "磨轮压紧力 (N)",
     "P_cool_act": "冷却水压力 (bar)",
@@ -229,14 +228,16 @@ def index():
 def train():
     global model_cache # Explicitly declare global to modify it
 
+    # Flask's request.files will automatically populate if 'enctype="multipart/form-data"'
+    # is set on the HTML form and the input type is file.
     if 'file' not in request.files:
-        flash("未选择文件", "error")
-        return redirect(url_for('index'))
+        # No 'file' part in the request, this means something is wrong with the form submission
+        # Or no file was selected at all by the user.
+        return jsonify({'status': 'error', 'message': '未选择文件或文件上传失败。'})
 
     file = request.files['file']
     if not file or file.filename == '':
-        flash("文件无效或文件名为空", "error")
-        return redirect(url_for('index'))
+        return jsonify({'status': 'error', 'message': '文件无效或文件名为空。'})
 
     try:
         df = pd.read_csv(io.StringIO(file.stream.read().decode("UTF8")))
@@ -316,26 +317,30 @@ def train():
         golden_mean = ok_df[features_to_use_in_model].mean().to_dict()
         golden_std = ok_df[features_to_use_in_model].std().to_dict()
 
-        model_cache = {
-            'model': clf,
-            'features': features_to_use_in_model, # Store the exact list of features used by the model
-            'best_threshold': best_thresh,
-            'feature_defaults': X.mean().to_dict(), # Defaults for all model features
-            'golden_baseline': {'mean': golden_mean, 'std': golden_std},
-            'knowledge_base': ok_df.copy(), # Store OK samples. Includes 'product_id' if present in original df.
-            'feature_plot': fig_to_base64(fig_importance),
-            'metrics': metrics,
-            'filename': file.filename,
-            'is_ready': True, # Flag indicating model is trained
-            'param_map': PARAM_MAP # Store param map for display
-        }
-        flash(f"文件 '{file.filename}' 上传成功，模型已完成训练！", "success")
+        # Update model_cache with new data and set is_ready to True
+        model_cache['model'] = clf
+        model_cache['features'] = features_to_use_in_model
+        model_cache['best_threshold'] = best_thresh
+        model_cache['feature_defaults'] = X.mean().to_dict()
+        model_cache['golden_baseline'] = {'mean': golden_mean, 'std': golden_std}
+        model_cache['knowledge_base'] = ok_df.copy()
+        model_cache['feature_plot'] = fig_to_base64(fig_importance)
+        model_cache['metrics'] = metrics
+        model_cache['filename'] = file.filename
+        model_cache['is_ready'] = True
+        model_cache['param_map'] = PARAM_MAP
+        
+        return jsonify({
+            'status': 'success',
+            'message': f"文件 '{file.filename}' 上传成功，模型已完成训练！",
+            'performance': metrics,
+            'feature_importance_plot': model_cache['feature_plot'], # Return directly from cache
+            'filename': file.filename # Pass filename for display
+        })
 
     except Exception as e:
-        flash(f"处理文件时出错: {e}", "error")
-        logging.error(f"Error during training: {e}", exc_info=True) # Log full traceback
-
-    return redirect(url_for('index'))
+        logging.error(f"Error during training: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': f'训练失败: {str(e)}'})
 
 @app.route('/api/process_monitor', methods=['POST'])
 def process_monitor():
