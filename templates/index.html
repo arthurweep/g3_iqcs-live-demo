@@ -391,7 +391,7 @@
                     <div id="featureImportancePlot" class="image-container" style="display: none;">
                         {% if cache.get('feature_plot') %} {# Fix: Use cache.get() #}
                             <h3>特征重要性</h3>
-                            <img src="data:image/png;base664,{{ cache.feature_plot }}" alt="Feature Importance Plot">
+                            <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance Plot">
                         {% endif %}
                     </div>
                 </div>
@@ -508,7 +508,7 @@
             toggleSpinner('trainModelBtn', 'trainSpinner', true, '正在训练模型...'); 
 
             const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
+            const file = fileInput.files[0]; // Get the actual file object
 
             if (!file) {
                 displayMessage('trainResults', '请选择一个CSV文件！', false, 'status-ng');
@@ -517,28 +517,39 @@
             }
 
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', file); // Append the file object to FormData
 
             try {
-                // For Flask flash messages and full page reload, we perform a standard form submission
-                const form = document.createElement('form');
-                form.action = BASE_API_URL + '/train'; // Target Flask's /train route
-                form.method = 'POST';
-                form.enctype = 'multipart/form-data';
-                form.style.display = 'none'; // Hide the form
+                const response = await fetch(BASE_API_URL + '/train', { 
+                    method: 'POST',
+                    body: formData // Send FormData directly
+                });
+                const result = await response.json(); // Expect JSON response
 
-                // Append file input to the new form
-                const fileInputClone = fileInput.cloneNode(true);
-                form.appendChild(fileInputClone);
+                if (result.status === 'success') {
+                    let msg = `<h3>${result.message}</h3>`;
+                    msg += `<p><strong>模型性能:</strong></p>`;
+                    for (const key in result.performance) {
+                        if (typeof result.performance[key] === 'number') {
+                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${(result.performance[key] * 100).toFixed(2)}%</p>`;
+                        } else {
+                            msg += `<p>- ${key.replace(/_/g, ' ')}: ${result.performance[key]}</p>`;
+                        }
+                    }
+                    displayMessage('trainResults', msg, true, 'status-ok');
+                    displayImage('featureImportancePlot', result.feature_importance_plot);
+                    document.getElementById('featureImportancePlot').style.display = 'block';
 
-                document.body.appendChild(form);
-                form.submit(); // Submit the form
-
-                // The page will reload after submission, so no further JS display needed here.
+                    document.getElementById('hideTrainSectionBtn').style.display = 'inline-flex'; 
+                    // Re-check visibility to enable/disable other buttons as model is now trained
+                    checkTrainSectionVisibility(); 
+                } else {
+                    displayMessage('trainResults', `训练失败: ${result.message}`, false, 'status-ng');
+                }
             } catch (error) {
-                // This catch might only be hit for network errors before submission
-                console.error("Error submitting form:", error);
+                console.error("Error during training fetch:", error);
                 displayMessage('trainResults', `网络或服务器错误: ${error}`, false, 'status-ng');
+            } finally {
                 toggleSpinner('trainModelBtn', 'trainSpinner', false, '开始训练模型'); 
             }
         }
