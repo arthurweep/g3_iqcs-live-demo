@@ -2,184 +2,463 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>广州百超玻璃质检系统 (IQCS) </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能玻璃质检系统 (IQCS)</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f4f7f6; color: #333; }
-        h1, h2, h3, h4 { color: #0056b3; }
-        h3 { border-bottom: 1px solid #007bff; padding-bottom: 0.3em; }
-        .main-container { max-width: 1600px; margin: auto; }
-        .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2em; }
-        .module { background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .upload-section { grid-column: 1 / -1; margin-bottom: 2em; }
-        input, button { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .results-box { margin-top: 1em; padding: 1em; background-color: #e9ecef; border-radius: 4px; min-height: 50px; }
-        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 1em; }
-        .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 4px; }
-        .flash-success { background-color: #d4edda; color: #155724; }
-        .flash-error { background-color: #f8d7da; color: #721c24; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #007bff; color: white; }
-        .verdict-box { border-left-width: 5px; border-left-style: solid; padding: 0.5em 1em; margin-top: 1em; border-radius: 4px; }
-        .status-ok { border-left-color: green; background-color: #e8f5e9; }
-        .status-warning { border-left-color: orange; background-color: #fff3e0; }
-        .status-ng { border-left-color: red; background-color: #ffebee; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+        }
+        .flash-message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .flash-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .flash-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"], input[type="number"], input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .plot-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .status-ok { color: green; font-weight: bold; }
+        .status-ng { color: red; font-weight: bold; }
+        .status-warning { color: orange; font-weight: bold; }
+        #predictionResult, #processMonitorResult, #recommendationResult, #adjustmentCandidatesDiv, #finalAdjustmentDiv {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        #adjustmentCandidatesDiv ul {
+            list-style: none;
+            padding: 0;
+        }
+        #adjustmentCandidatesDiv li {
+            background-color: #e9e9e9;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #adjustmentCandidatesDiv li button {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="main-container">
+    <div class="container">
         <h1>智能玻璃质检系统 (IQCS) - 实时上传训练演示版</h1>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for c, m in messages %}<div class="flash-message flash-{{ c }}">{{ m }}</div>{% endfor %}{% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        <div class="module upload-section">
+        <div class="section">
             <h2>步骤一：上传数据并实时训练AI模型</h2>
-            <form action="/train" method="post" enctype="multipart/form-data"><input type="file" name="file" required><button type="submit">上传并开始训练</button></form>
-        </div>
-        
-        {% if model_ready %}
-        <div class="module upload-section">
-            <h2>训练结果概览 (基于文件: {{ cache.filename }})</h2>
-             <div style="display: flex; gap: 2em; align-items: flex-start;">
-                <div style="flex:1;">
-                    <h3>模型性能指标</h3>
-                    <table><tr><th>指标</th><th>值</th></tr>
-                        <tr><td>准确率 (Accuracy)</td><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr>
-                        <tr><td>不合格品召回率 (Recall NG)</td><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr>
-                        <tr><td>不合格品精确率 (Precision NG)</td><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr>
-                        <tr><td>不合格品F1分数 (F1 NG)</td><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr>
-                    </table>
+            <form action="/train" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file">上传CSV数据文件:</label>
+                    <input type="file" name="file" id="file" accept=".csv" required>
                 </div>
-                <div style="flex:1;"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" alt="Feature Importance" style="max-width: 100%;"></div>
-            </div>
+                <button type="submit">开始训练</button>
+            </form>
         </div>
 
-        <div class="grid-container">
-            <div class="module">
+        {% if model_ready %}
+            <div class="section">
+                <h2>训练结果概览 (基于文件: {{ cache.filename }})</h2>
+                <h3>模型性能指标</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>值</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>准确率 (Accuracy)</td>
+                            <td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td>
+                        </tr>
+                        <tr>
+                            <td>不合格品召回率 (Recall NG)</td>
+                            <td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td>
+                        </tr>
+                        <tr>
+                            <td>不合格品精确率 (Precision NG)</td>
+                            <td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td>
+                        </tr>
+                        <tr>
+                            <td>不合格品F1分数 (F1 NG)</td>
+                            <td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>特征重要性</h3>
+                <div class="plot-container">
+                    <img src="data:image/png;base64,{{ cache.feature_plot }}" alt="特征重要性图">
+                </div>
+            </div>
+
+            <div class="section">
                 <h2>模块一：产线心电图</h2>
-                <form id="monitor-form"><div class="param-grid">
-                    {% for feature, name in displayable_params %}
-                        <div><label for="monitor_{{ feature }}">{{ name }}:</label><input type="number" step="any" id="monitor_{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
+                <form id="processMonitorForm">
+                    {% for param_name, param_display_name in displayable_params %}
+                    <div class="form-group">
+                        <label for="pm_{{ param_name }}">{{ param_display_name }}:</label>
+                        <input type="number" step="0.01" id="pm_{{ param_name }}" name="{{ param_name }}" value="0.0" required>
+                    </div>
                     {% endfor %}
-                </div><button type="submit">监控检查</button></form>
-                <div id="monitor-spinner" class="spinner"></div><div id="monitor-results" class="results-box"></div>
+                    <button type="submit">实时监控</button>
+                </form>
+                <div id="processMonitorResult"></div>
             </div>
-            <div class="module">
+
+            <div class="section">
                 <h2>模块二：AI工艺员</h2>
-                <form id="recommend-form"><label for="product_id">产品ID (例如: A, B, C):</label><input type="text" id="product_id" name="product_id" value="A" required><button type="submit">获取推荐参数</button></form>
-                <div id="recommend-spinner" class="spinner"></div><div id="recommend-results" class="results-box"></div>
+                <form id="recommendParamsForm">
+                    <div class="form-group">
+                        <label for="product_id_rec">产品ID (可选):</label>
+                        <input type="text" id="product_id_rec" name="product_id">
+                    </div>
+                    <button type="submit">获取推荐参数</button>
+                </form>
+                <div id="recommendationResult"></div>
             </div>
-            <div class="module">
+
+            <div class="section">
                 <h2>模块三：AI侦探</h2>
-                <form id="predict-form"><div class="param-grid">
-                     {% for feature, name in displayable_params %}
-                        <div><label for="{{ feature }}">{{ name }}:</label><input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ cache.feature_defaults.get(feature, 0) | round(3) }}" required></div>
-                     {% endfor %}
-                </div><button type="submit">开始诊断</button></form>
-                <div id="predict-spinner" class="spinner"></div><div id="predict-results" class="results-box"></div>
+                <form id="predictForm">
+                    <div class="form-group">
+                        <label for="product_id_pred">产品ID (可选):</label>
+                        <input type="text" id="product_id_pred" name="product_id">
+                    </div>
+                    {% for param_name, param_display_name in displayable_params %}
+                    <div class="form-group">
+                        <label for="pred_{{ param_name }}">{{ param_display_name }}:</label>
+                        <input type="number" step="0.01" id="pred_{{ param_name }}" name="{{ param_name }}" value="0.0" required>
+                    </div>
+                    {% endfor %}
+                    <button type="submit">进行预测</button>
+                </form>
+                <div id="predictionResult"></div>
+                <div id="adjustmentInfo"></div> <!-- For messages related to adjustment -->
+                <div id="adjustmentCandidatesDiv"></div> <!-- New: for displaying adjustment candidates -->
+                <div id="finalAdjustmentDiv"></div> <!-- New: for displaying final adjustment -->
             </div>
-        </div>
         {% else %}
-        <div class="module upload-section"><p style="text-align: center; font-weight: bold;">系统尚未训练，请先上传数据文件以激活全部功能。</p></div>
+            <div class="section">
+                <p>系统尚未训练，请先上传数据文件以激活全部功能。</p>
+            </div>
         {% endif %}
     </div>
 
     <script>
-        async function handleApiCall(formId, spinnerId, resultsId, apiUrl, getPayload, displayFunc) {
-            const form = document.getElementById(formId);
-            if(form) {
-                form.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const spinner = document.getElementById(spinnerId), resultsDiv = document.getElementById(resultsId);
-                    spinner.style.display = 'block'; resultsDiv.innerHTML = '正在处理请求...';
-                    const payload = getPayload(form);
+        // Global variables to store current prediction context for adjustment
+        let currentInputData = null;
+        let currentShapValues = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Flash messages auto-hide
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                setTimeout(() => {
+                    msg.style.display = 'none';
+                }, 5000);
+            });
+
+            // Process Monitor Form
+            const processMonitorForm = document.getElementById('processMonitorForm');
+            if (processMonitorForm) {
+                processMonitorForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const params = {};
+                    processMonitorForm.querySelectorAll('input[type="number"]').forEach(input => {
+                        params[input.name] = parseFloat(input.value);
+                    });
+
                     try {
-                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.error || '请求失败');
-                        displayFunc(resultsId, result, payload);
-                    } catch (error) { resultsDiv.innerHTML = `<p style="color: red;">错误: ${error.message}</p>`; } 
-                    finally { spinner.style.display = 'none'; }
+                        const response = await fetch('/api/process_monitor', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(params)
+                        });
+                        const data = await response.json();
+                        const resultDiv = document.getElementById('processMonitorResult');
+                        resultDiv.innerHTML = '';
+                        data.messages.forEach(msg => {
+                            resultDiv.innerHTML += `<p class="${data.status}">${msg}</p>`;
+                        });
+                    } catch (error) {
+                        console.error('监控请求失败:', error);
+                        document.getElementById('processMonitorResult').innerHTML = `<p class="error">监控失败: ${error.message}</p>`;
+                    }
                 });
             }
-        }
-        
-        function displayMonitorResults(resultsId, result) {
-            const el = document.getElementById(resultsId);
-            const statusColor = result.status === 'ok' ? 'green' : 'orange';
-            el.innerHTML = `<div style="color: ${statusColor}; font-weight: bold;">${result.status === 'ok' ? '过程稳定' : '过程异常预警!'}</div>${result.messages.map(msg => `<p>${msg}</p>`).join('')}`;
-        }
-        
-        function displayRecommendResults(resultsId, result) {
-            const el = document.getElementById(resultsId);
-            let paramsHTML = '<table><tr><th>参数</th><th>推荐值</th></tr>';
-            for (const [key, value] of Object.entries(result.recommended_params)) {
-                paramsHTML += `<tr><td>${result.param_map[key] || key}</td><td>${value.toFixed(3)}</td></tr>`;
+
+            // Recommend Params Form
+            const recommendParamsForm = document.getElementById('recommendParamsForm');
+            if (recommendParamsForm) {
+                recommendParamsForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const productId = document.getElementById('product_id_rec').value;
+                    const payload = productId ? { product_id: productId } : {};
+
+                    try {
+                        const response = await fetch('/api/recommend_params', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        const resultDiv = document.getElementById('recommendationResult');
+                        resultDiv.innerHTML = `<h3>${data.message}</h3>`;
+                        if (data.recommended_params) {
+                            const table = document.createElement('table');
+                            table.innerHTML = '<thead><tr><th>参数</th><th>推荐值</th></tr></thead><tbody></tbody>';
+                            const tbody = table.querySelector('tbody');
+                            for (const paramName in data.recommended_params) {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `<td>${data.param_map[paramName] || paramName}</td><td>${data.recommended_params[paramName].toFixed(2)}</td>`;
+                                tbody.appendChild(tr);
+                            }
+                            resultDiv.appendChild(table);
+                        }
+                    } catch (error) {
+                        console.error('推荐请求失败:', error);
+                        document.getElementById('recommendationResult').innerHTML = `<p class="error">推荐失败: ${error.message}</p>`;
+                    }
+                });
             }
-            paramsHTML += '</table>';
-            el.innerHTML = `<h3>${result.message}</h3>${paramsHTML}`;
-        }
 
-        async function displayPredictResults(resultsId, result, payload) {
-            const el = document.getElementById(resultsId);
-            let statusText, statusClass;
-            if (result.status === 'ok') { statusText = '合格 (OK)'; statusClass = 'status-ok'; } 
-            else if (result.status === 'warning') { statusText = '过程预警 (Warning)'; statusClass = 'status-warning'; } 
-            else { statusText = '不合格 (NG)'; statusClass = 'status-ng'; }
-
-            let reasonHTML = `<h4>诊断依据</h4><ul>${result.verdict_reason.map(r => `<li>${r}</li>`).join('')}</ul>`;
-
-            el.innerHTML = `<h3>诊断结论</h3>
-                <div class="verdict-box ${statusClass}">
-                    <p style="font-weight:bold; font-size: 1.2em;">最终判定: ${statusText}</p>${reasonHTML}
-                </div>
-                <h4>AI模型内部判断</h4><table>
-                <tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr>
-                <tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr>
-                </table>
-                <h3>根因分析 (SHAP图)</h3>
-                <img src="data:image/png;base64,${result.waterfall_plot}" alt="SHAP Plot" style="max-width: 100%;">
-                <div id="adjustment-section" class="results-box" style="margin-top:1em;"></div>`;
-            
-            if (result.status === 'ng') {
-                const adjSection = document.getElementById('adjustment-section');
-                adjSection.innerHTML = '<h3>正在生成调整建议...</h3><div class="spinner" style="display:block;"></div>';
-                try {
-                    const adjPayload = { input_data: result.input_data, shap_values: result.shap_values };
-                    const adjResponse = await fetch('/api/adjust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adjPayload) });
-                    const adjResult = await adjResponse.json();
-                    if (!adjResponse.ok) throw new Error(adjResult.error || '获取建议失败');
-                    displayAdjustmentResults('adjustment-section', adjResult, result.threshold);
-                } catch (error) { adjSection.innerHTML = `<p style="color: red;">获取调整建议时出错: ${error.message}</p>`; }
+            // Predict Form
+            const predictForm = document.getElementById('predictForm');
+            if (predictForm) {
+                predictForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    await predict();
+                });
             }
-        }
-        
-        function displayAdjustmentResults(elementId, result, threshold) {
-            const el = document.getElementById(elementId);
-            let adjustmentsHTML = `<h3>智能优化建议</h3><p>以下建议旨在将样本的合格(OK)概率提升至阈值 <strong>${(threshold*100).toFixed(2)}%</strong> 以上。</p>`;
-            if (Object.keys(result.adjustments).length > 0) {
-                adjustmentsHTML += '<table><tr><th>待调整特征</th><th>当前值</th><th>建议调整量</th><th>调整后目标值</th><th>此调整对OK概率的预期贡献</th></tr>';
-                for (const [key, value] of Object.entries(result.adjustments)) {
-                    adjustmentsHTML += `<tr>
-                        <td>${result.param_map[key] || key}</td><td>${value.original_value.toFixed(3)}</td>
-                        <td style="color:${value.change > 0 ? 'green':'red'};">${value.change > 0 ? '+':''}${value.change.toFixed(3)}</td>
-                        <td style="font-weight:bold;">${value.suggested_value.toFixed(3)}</td>
-                        <td style="color:green; font-weight:bold;">+${(value.prob_contribution*100).toFixed(2)}%</td>
-                    </tr>`;
+        });
+
+        async function predict() {
+            const params = {};
+            document.getElementById('predictForm').querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+                if (input.name === 'product_id') {
+                    params[input.name] = input.value;
+                } else {
+                    params[input.name] = parseFloat(input.value);
                 }
-                adjustmentsHTML += '</table>';
+            });
+
+            // Clear previous results
+            document.getElementById('predictionResult').innerHTML = '';
+            document.getElementById('adjustmentInfo').innerHTML = '';
+            document.getElementById('adjustmentCandidatesDiv').innerHTML = '';
+            document.getElementById('finalAdjustmentDiv').innerHTML = '';
+            currentInputData = null;
+            currentShapValues = null;
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                const data = await response.json();
+
+                const resultDiv = document.getElementById('predictionResult');
+                resultDiv.innerHTML = `
+                    <h3>预测结果: <span class="status-${data.status}">${data.status.toUpperCase()}</span></h3>
+                    <p>AI模型预测合格概率: <strong>${(data.prob * 100).toFixed(2)}%</strong> (判断阈值: ${(data.threshold * 100).toFixed(2)}%)</p>
+                    <p><strong>诊断理由:</strong></p>
+                    <ul>
+                        ${data.verdict_reason.map(reason => `<li>${reason}</li>`).join('')}
+                    </ul>
+                    <h4>SHAP解释图 (特征对预测结果的影响)</h4>
+                    <div class="plot-container">
+                        <img src="data:image/png;base64,${data.waterfall_plot}" alt="SHAP瀑布图">
+                    </div>
+                `;
+
+                // Store data for potential adjustment later
+                currentInputData = params; 
+                currentShapValues = data.shap_values;
+
+                // --- New Adjustment Interaction Logic ---
+                if (data.status === 'ng' || data.status === 'warning') {
+                    document.getElementById('adjustmentInfo').innerHTML = `<p><strong>系统建议：</strong>检测到异常或不合格预测。正在为您分析可调整参数...</p>`;
+                    await getAdjustmentCandidates(params, data.shap_values);
+                }
+
+            } catch (error) {
+                console.error('预测请求失败:', error);
+                document.getElementById('predictionResult').innerHTML = `<p class="error">预测失败: ${error.message}</p>`;
             }
-            adjustmentsHTML += `<p style="margin-top:1em;"><strong>${result.message}</strong></p>`;
-            el.innerHTML = adjustmentsHTML;
         }
 
-        handleApiCall('monitor-form', 'monitor-spinner', 'monitor-results', '/api/process_monitor', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayMonitorResults);
-        handleApiCall('recommend-form', 'recommend-spinner', 'recommend-results', '/api/recommend_params', (f) => ({ product_id: f.product_id.value }), displayRecommendResults);
-        handleApiCall('predict-form', 'predict-spinner', 'predict-results', '/api/predict', (f) => { const d={}; new FormData(f).forEach((v,k)=>{d[k]=parseFloat(v)}); return d; }, displayPredictResults);
+        async function getAdjustmentCandidates(inputData, shapValues) {
+            try {
+                const response = await fetch('/api/get_adjustment_candidates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input_data: inputData, shap_values: shapValues })
+                });
+                const data = await response.json();
+
+                const candidatesDiv = document.getElementById('adjustmentCandidatesDiv');
+                candidatesDiv.innerHTML = `<h3>${data.message}</h3>`;
+                if (data.candidates && data.candidates.length > 0) {
+                    const ul = document.createElement('ul');
+                    data.candidates.forEach(candidate => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>${candidate.display_name}</span> - <span>${candidate.reason}</span> 
+                                        <button onclick="selectAndAdjust('${candidate.name}')">选择此参数并调整</button>`;
+                        ul.appendChild(li);
+                    });
+                    candidatesDiv.appendChild(ul);
+                } else {
+                    candidatesDiv.innerHTML += `<p>未能找到明确的可调整参数。</p>`;
+                }
+            } catch (error) {
+                console.error('获取调整候选参数失败:', error);
+                document.getElementById('adjustmentCandidatesDiv').innerHTML = `<p class="error">获取调整候选参数失败: ${error.message}</p>`;
+            }
+        }
+
+        async function selectAndAdjust(selectedParameter) {
+            if (!currentInputData) {
+                alert('请先进行预测以获取上下文数据！');
+                return;
+            }
+
+            // Clear candidates div once a selection is made
+            document.getElementById('adjustmentCandidatesDiv').innerHTML = '';
+            document.getElementById('adjustmentInfo').innerHTML = ''; // Clear info message too
+            
+            try {
+                const response = await fetch('/api/adjust', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input_data: currentInputData, selected_parameter: selectedParameter })
+                });
+                const data = await response.json();
+
+                const finalAdjustDiv = document.getElementById('finalAdjustmentDiv');
+                finalAdjustDiv.innerHTML = `<h3>智能调整建议</h3>`;
+                finalAdjustDiv.innerHTML += `<p>${data.message}</p>`;
+
+                if (data.adjustments && Object.keys(data.adjustments).length > 0) {
+                    const adjTable = document.createElement('table');
+                    adjTable.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>参数名</th>
+                                <th>原始值</th>
+                                <th>建议值</th>
+                                <th>变化量</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+                    const tbody = adjTable.querySelector('tbody');
+                    for (const paramName in data.adjustments) {
+                        const adj = data.adjustments[paramName];
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${data.param_map[paramName] || paramName}</td>
+                            <td>${adj.original_value.toFixed(2)}</td>
+                            <td>${adj.suggested_value.toFixed(2)}</td>
+                            <td>${adj.change > 0 ? '+' : ''}${adj.change.toFixed(2)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                    finalAdjustDiv.appendChild(adjTable);
+                    finalAdjustDiv.innerHTML += `<p>调整后预测合格概率: <strong>${(data.final_prob_after_adjustment * 100).toFixed(2)}%</strong></p>`;
+                }
+            } catch (error) {
+                console.error('获取最终调整建议失败:', error);
+                document.getElementById('finalAdjustmentDiv').innerHTML = `<p class="error">获取最终调整建议失败: ${error.message}</p>`;
+            }
+        }
     </script>
 </body>
 </html>
