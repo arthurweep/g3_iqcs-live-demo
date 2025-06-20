@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.6</title>
+    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.8</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
@@ -18,8 +18,10 @@
         .verdict-title-ng { color: #dc3545; }
         .suggestion-table th { background-color: #0d6efd; color: white; }
         .contribution-positive { color: #28a745; font-weight: bold; }
-        @keyframes flash-warning { 0%, 100% { background-color: #fff3cd; box-shadow: 0 0 8px #ffc107; } 50% { background-color: #ffc107; box-shadow: none; } }
-        .input-warning { animation: flash-warning 1s 2; }
+        @keyframes flash-warning-bg { 0%, 100% { background-color: inherit; } 50% { background-color: #ffc107; } }
+        .input-warning { animation: flash-warning-bg 1s 2; }
+        @keyframes flash-warning-text { 0%, 100% { color: #dc3545; opacity: 1; } 50% { opacity: 0.5; } }
+        .blinking-warning { animation: flash-warning-text 1s infinite; }
         @keyframes highlight-module { 0%, 100% { box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.5); } 50% { box-shadow: 0 0 15px 5px rgba(13, 110, 253, 1); } }
         .module-highlight { animation: highlight-module 1s 1; }
         #recommend-results ul { column-count: 2; column-gap: 20px; list-style-type: none; padding-left: 0; }
@@ -30,7 +32,6 @@
 <div class="container mt-4">
     <h1 class="text-center mb-4">智能玻璃质检系统 (IQCS)</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
-
     <div class="card"><div class="card-body"><h2 class="section-header">步骤一：上传数据并训练AI模型</h2><form action="{{ url_for('train') }}" method="post" enctype="multipart/form-data"><div class="input-group"><input type="file" class="form-control" name="file" required><button class="btn btn-primary" type="submit">上传并训练</button></div></form></div></div>
     {% if model_ready %}
     <div class="card"><div class="card-body"><h2 class="section-header">训练结果概览 (基于文件: {{ cache.filename }})</h2><div class="row"><div class="col-md-6"><h3>模型性能指标</h3><table class="table table-bordered"><tbody><tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr><tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr><tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr><tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr></tbody></table><div class="mt-4"><h3>模型解读与数据分析</h3><p>本系统采用<strong>XGBoost</strong>算法（分类器）与<strong>K-Nearest Neighbors</strong>算法（推荐器），是工业AI质检领域的成熟解决方案。</p><ul class="list-group"><li class="list-group-item d-flex justify-content-between align-items-center">总样本数<span class="badge bg-primary rounded-pill">{{ cache.data_analysis.total_samples }}</span></li><li class="list-group-item d-flex justify-content-between align-items-center">合格品 (OK) 数量<span class="badge bg-success rounded-pill">{{ cache.data_analysis.count_ok }} ({{ "%.2f%%"|format(cache.data_analysis.ok_percentage) }})</span></li><li class="list-group-item d-flex justify-content-between align-items-center">不合格品 (NG) 数量<span class="badge bg-danger rounded-pill">{{ cache.data_analysis.count_ng }} ({{ "%.2f%%"|format(cache.data_analysis.ng_percentage) }})</span></li></ul></div></div><div class="col-md-6"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" class="img-fluid"></div></div></div></div>
@@ -38,7 +39,7 @@
     <div class="card"><div class="card-body"><h2 class="section-header">步骤三：连续生产模拟</h2><div class="d-flex justify-content-between align-items-center"><div><button id="start-sim-btn" class="btn btn-lg btn-success"><i class="bi bi-play-circle-fill"></i> 开始模拟</button><button id="stop-sim-btn" class="btn btn-lg btn-danger" disabled><i class="bi bi-stop-circle-fill"></i> 结束模拟</button></div><div><button id="export-ok-btn" class="btn btn-outline-success" disabled><i class="bi bi-clipboard-check"></i> 复制合格品</button><button id="export-ng-btn" class="btn btn-outline-danger" disabled><i class="bi bi-clipboard-x"></i> 复制不合格品</button></div></div></div></div>
     <div class="row">
         <div class="col-lg-4"><div id="module-monitor-card" class="card h-100"><div class="card-body"><h3 class="section-header">模块一：产线心电图</h3><div id="monitor-header" class="mb-3"></div><form id="monitor-form">{% for key, name in displayable_params %}<div class="mb-2"><label class="form-label small d-flex justify-content-between"><span>{{ name }}</span><span class="text-muted fw-normal">{{ baseline_ranges.get(key, '') }}</span></label><input type="number" step="any" class="form-control form-control-sm" id="monitor-{{ key }}" name="{{ key }}" readonly></div>{% endfor %}</form></div></div></div>
-        <div class="col-lg-8"><div id="module-predict-card" class="card h-100"><div class="card-body"><h3 class="section-header">模块三：AI侦探实时诊断</h3><div id="predict-results" class="mt-3"><div class="text-center text-muted p-5">等待模拟开始...</div></div></div></div></div>
+        <div class="col-lg-8"><div id="module-predict-card" class="card h-100"><div class="card-body d-flex flex-column"><h3 class="section-header">模块三：AI侦探实时诊断</h3><div id="predict-results" class="mt-3 flex-grow-1"><div class="text-center text-muted p-5">等待模拟开始...</div></div><div id="countdown-timer-container" class="text-center mt-3 h4 fw-bold text-primary"></div></div></div></div>
     </div>
     <div class="row mt-4">
         <div class="col-md-6"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h3 class="mb-0 fs-5">合格品日志 (OK)</h3><span id="ok-count-badge" class="badge bg-success fs-5">0</span></div><div class="card-body" style="max-height: 300px; overflow-y: auto;"><table class="table table-sm table-striped table-hover"><thead><tr><th>ID</th><th>时间</th><th>合格率</th><th>操作</th></tr></thead><tbody id="ok-table-body"></tbody></table></div></div></div>
@@ -51,12 +52,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('start-sim-btn')) return;
+
     const recommendForm = document.getElementById('recommend-form');
     if(recommendForm) {
         recommendForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+            e.preventDefault(); const formData = new FormData(e.target); const data = Object.fromEntries(formData.entries());
             const resultsDiv = document.getElementById('recommend-results');
             resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-success"></div></div>';
             const response = await fetch('/api/recommend_params', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (result.status === 'ok') { verdictClass = 'verdict-ok'; titleClass = 'verdict-title-ok'; statusText = '合格 (OK)'; } 
         else { verdictClass = 'verdict-ng'; titleClass = 'verdict-title-ng'; statusText = '不合格 (NG)'; }
         let reasonsHTML = '<ul>' + result.verdict_reason.map(r => `<li>${r}</li>`).join('') + '</ul>';
-        targetDiv.innerHTML = `<div class="row g-4"><div class="col-lg-5"><div class="verdict-box ${verdictClass}"><h4 class="section-header">诊断结论</h4><h5 class="${titleClass}">最终判定: ${statusText}</h5><p><strong>诊断依据:</strong></p>${reasonsHTML}<hr><p><strong>AI模型内部判断:</strong></p><table class="table table-bordered" style="width: auto;"><tbody><tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr><tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr></tbody></table></div></div><div class="col-lg-7"><div class="verdict-box" style="background-color: #fff; border: 1px solid #ddd;"><h4 class="section-header">SHAP可解释性分析</h4><img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid"></div></div></div><div id="countdown-timer-container" class="text-center mt-3 h4 fw-bold text-primary"></div>`;
+        targetDiv.innerHTML = `<div class="row g-4 h-100"><div class="col-lg-5 d-flex"><div class="verdict-box ${verdictClass} w-100"><h4 class="section-header">诊断结论</h4><h5 class="${titleClass}">最终判定: ${statusText}</h5><p><strong>诊断依据:</strong></p>${reasonsHTML}<hr><p><strong>AI模型内部判断:</strong></p><table class="table table-bordered" style="width: auto;"><tbody><tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr><tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr></tbody></table></div></div><div class="col-lg-7 d-flex"><div class="verdict-box w-100" style="background-color: #fff; border: 1px solid #ddd;"><h4 class="section-header">SHAP可解释性分析</h4><img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid"></div></div></div>`;
     };
     
     const startCountdown = (duration) => {
@@ -90,16 +90,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!timerElement) return;
         const updateTimer = () => { timerElement.innerHTML = `<i class="bi bi-hourglass-split"></i>  下次模拟倒计时: ${timer} 秒`; };
         updateTimer();
-        countdownInterval = setInterval(() => { timer--; updateTimer(); if (timer <= 0) clearInterval(countdownInterval); }, 1000);
+        countdownInterval = setInterval(() => { timer--; updateTimer(); if (timer <= 0) { clearInterval(countdownInterval); timerElement.innerHTML = ''; } }, 1000);
     };
 
     const runSimulationStep = async () => {
         monitorCard.classList.remove('module-highlight');
         predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">AI侦探正在分析...</p></div>';
+        
         const genResponse = await fetch('/api/simulation/generate');
         const genData = await genResponse.json();
         if (genData.error) { stopSimulation(); alert(`模拟出错: ${genData.error}`); return; }
-        monitorHeader.innerHTML = `<div class="alert alert-info p-2 small"><strong>ID:</strong> ${genData.product_id}<br><strong>时间:</strong> ${genData.timestamp}</div>`;
+        
+        let warningHtml = genData.warnings.length > 0 ? '<span class="ms-3 badge bg-danger blinking-warning">过程异常</span>' : '';
+        monitorHeader.innerHTML = `<div class="alert alert-info p-2 d-flex justify-content-between align-items-center"><div><small><strong>ID:</strong> ${genData.product_id}<br><strong>时间:</strong> ${genData.timestamp}</small></div>${warningHtml}</div>`;
         const monitorForm = document.getElementById('monitor-form');
         monitorForm.querySelectorAll('input').forEach(input => {
             input.classList.remove('input-warning');
@@ -120,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
         historicalRecords[predResult.id] = predResult;
         
         let newRow = `<tr><td>${predResult.id}</td><td>${new Date().toLocaleTimeString()}</td><td>${(predResult.prob * 100).toFixed(2)}%</td><td><button class="btn btn-sm btn-outline-primary view-details-btn" data-id="${predResult.id}">详情</button></td>`;
-        if (predResult.status === 'ng') { newRow += `<td><button class="btn btn-sm btn-outline-warning adjustment-link" data-id="${predResult.id}">建议</button></td>`; }
+        if (predResult.status === 'ng') { newRow += `<td><button class="btn btn-sm btn-outline-warning adjustment-link" data-id="${predResult.id}">建议</button></td>`; } else {newRow += '<td>-</td>'}
         newRow += '</tr>';
         
         const targetTable = predResult.status === 'ok' ? okTableBody : ngTableBody;
@@ -143,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         simulationInterval = null; countdownInterval = null;
         startBtn.disabled = false; stopBtn.disabled = true; exportOkBtn.disabled = false; exportNgBtn.disabled = false;
         predictResultsDiv.innerHTML = '<div class="text-center text-muted p-5">模拟已结束。</div>';
+        document.getElementById('countdown-timer-container').innerHTML = '';
     };
 
     const exportData = (status) => {
