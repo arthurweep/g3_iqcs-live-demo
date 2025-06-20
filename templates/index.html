@@ -8,18 +8,32 @@
     <style>
         body { background-color: #f8f9fa; }
         .card { margin-bottom: 1.5rem; }
-        .verdict-ok { border-left: 5px solid #198754; }
-        .verdict-ng { border-left: 5px solid #dc3545; }
-        .verdict-warning { border-left: 5px solid #ffc107; }
-        .status-text-ok { color: #198754; }
-        .status-text-ng { color: #dc3545; }
-        .status-text-warning { color: #ffc107; }
-        #adjustment-results ul { padding-left: 1.2rem; }
+        h2, h3 { color: #0d6efd; border-bottom: 2px solid #0d6efd; padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: bold;}
+        .section-header { color: #0d6efd; border-bottom: 2px solid #0d6efd; padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: bold;}
+        
+        /* 诊断结论样式 */
+        .verdict-box { border-radius: 0.25rem; padding: 1.5rem; margin-top: 1rem; }
+        .verdict-box h4 { font-weight: bold; }
+        .verdict-ok { background-color: #e8f5e9; border-left: 5px solid #28a745; }
+        .verdict-ng { background-color: #fdecea; border-left: 5px solid #dc3545; }
+        .verdict-warning { background-color: #fff8e1; border-left: 5px solid #ffc107; }
+
+        .verdict-title-ok { color: #28a745; }
+        .verdict-title-ng { color: #dc3545; }
+        .verdict-title-warning { color: #ffc107; }
+
+        .verdict-box ul { padding-left: 1.2rem; }
+        .verdict-box ul li { margin-bottom: 0.5rem; }
+
+        /* 优化建议表格样式 */
+        .suggestion-table th { background-color: #0d6efd; color: white; text-align: center; vertical-align: middle; }
+        .suggestion-table td { text-align: center; vertical-align: middle; }
+        .contribution-positive { color: #28a745; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="container mt-4">
-    <h1 class="text-center mb-4">智能玻璃质检系统 (IQCS)</h1>
+    <h1 class="text-center mb-4" style="color: #0d6efd; font-weight: bold;">智能玻璃质检系统 (IQCS)</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -29,8 +43,8 @@
     {% endwith %}
 
     <div class="card">
-        <div class="card-header"><h2>步骤一：上传数据并实时训练AI模型</h2></div>
         <div class="card-body">
+            <h2 class="section-header">步骤一：上传数据并实时训练AI模型</h2>
             <form action="{{ url_for('train') }}" method="post" enctype="multipart/form-data">
                 <div class="input-group">
                     <input type="file" class="form-control" name="file" required>
@@ -42,8 +56,8 @@
 
     {% if model_ready %}
     <div class="card">
-        <div class="card-header"><h2>训练结果概览 (基于文件: {{ cache.filename }})</h2></div>
         <div class="card-body">
+            <h2 class="section-header">训练结果概览 (基于文件: {{ cache.filename }})</h2>
             <div class="row">
                 <div class="col-md-6">
                     <h3>模型性能指标</h3>
@@ -66,14 +80,14 @@
 
     <div class="row">
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><h3>模块一：产线心电图</h3></div>
+            <div class="card h-100">
                 <div class="card-body">
+                    <h3 class="section-header">模块一：产线心电图</h3>
                     <form id="monitor-form">
                         {% for key, name in displayable_params %}
                         <div class="mb-3">
                             <label for="monitor-{{ key }}" class="form-label">{{ name }}</label>
-                            <input type="number" step="any" class="form-control" id="monitor-{{ key }}" name="{{ key }}" value="0">
+                            <input type="number" step="any" class="form-control" id="monitor-{{ key }}" name="{{ key }}" value="{{ random_initial_values.get(key, 0) }}">
                         </div>
                         {% endfor %}
                         <button type="submit" class="btn btn-info w-100">监控参数</button>
@@ -83,9 +97,9 @@
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><h3>模块二：AI工艺员</h3></div>
-                <div class="card-body">
+            <div class="card h-100">
+                 <div class="card-body">
+                    <h3 class="section-header">模块二：AI工艺员</h3>
                     <form id="recommend-form">
                         <div class="mb-3">
                             <label for="product_id" class="form-label">产品ID</label>
@@ -98,25 +112,27 @@
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><h3>模块三：AI侦探</h3></div>
-                <div class="card-body">
+            <div class="card h-100">
+                 <div class="card-body">
+                    <h3 class="section-header">模块三：AI侦探</h3>
                     <form id="predict-form">
                          {% for key, name in displayable_params %}
                         <div class="mb-3">
                             <label for="predict-{{ key }}" class="form-label">{{ name }}</label>
-                            <input type="number" step="any" class="form-control" id="predict-{{ key }}" name="{{ key }}" value="0">
+                            <input type="number" step="any" class="form-control" id="predict-{{ key }}" name="{{ key }}" value="{{ random_initial_values.get(key, 0) }}">
                         </div>
                         {% endfor %}
                         <button type="submit" class="btn btn-primary w-100">AI判定</button>
                     </form>
-                    <!-- --- !!! 核心修改：更新预测和建议的显示区域 !!! --- -->
-                    <div id="predict-results" class="mt-3"></div>
-                    <div id="adjustment-results" class="mt-3"></div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- 诊断和建议结果将显示在这里 -->
+    <div id="predict-results" class="mt-4"></div>
+    <div id="adjustment-results" class="mt-4"></div>
+
     {% else %}
     <div class="alert alert-info">系统尚未训练，请先上传数据文件以激活全部功能。</div>
     {% endif %}
@@ -126,105 +142,93 @@
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.querySelector('form')) return;
 
-    // 产线心电图
+    // --- 模块一：产线心电图 ---
     document.getElementById('monitor-form').addEventListener('submit', async e => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
         for (let key in data) { data[key] = parseFloat(data[key]); }
-        
-        const response = await fetch('/api/process_monitor', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
+        const response = await fetch('/api/process_monitor', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
         const result = await response.json();
         const resultsDiv = document.getElementById('monitor-results');
         const alertClass = result.status === 'ok' ? 'alert-success' : 'alert-warning';
         resultsDiv.innerHTML = `<div class="alert ${alertClass}">${result.messages.join('<br>')}</div>`;
     });
 
-    // AI工艺员
+    // --- 模块二：AI工艺员 ---
     document.getElementById('recommend-form').addEventListener('submit', async e => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
-
-        const response = await fetch('/api/recommend_params', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
+        const response = await fetch('/api/recommend_params', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
         const result = await response.json();
         const resultsDiv = document.getElementById('recommend-results');
         let paramsHTML = `<div class="alert alert-info">${result.message}</div><ul class="list-group">`;
         for (let key in result.recommended_params) {
-            paramsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                ${result.param_map[key] || key}
-                <span class="badge bg-primary rounded-pill">${parseFloat(result.recommended_params[key]).toFixed(3)}</span>
-            </li>`;
+            paramsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${result.param_map[key] || key}<span class="badge bg-primary rounded-pill">${parseFloat(result.recommended_params[key]).toFixed(3)}</span></li>`;
         }
         paramsHTML += '</ul>';
         resultsDiv.innerHTML = paramsHTML;
     });
 
-    // AI侦探
+    // --- 模块三：AI侦探 ---
     const predictForm = document.getElementById('predict-form');
     const predictResultsDiv = document.getElementById('predict-results');
     const adjustmentResultsDiv = document.getElementById('adjustment-results');
-    let lastPredictionData = null; // 存储上一次预测的完整数据
+    let lastPredictionData = null;
 
     predictForm.addEventListener('submit', async e => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
         for (let key in data) { data[key] = parseFloat(data[key]); }
-
-        predictResultsDiv.innerHTML = `<div class="text-center">AI分析中...</div>`;
-        adjustmentResultsDiv.innerHTML = ''; // 清空旧建议
         
-        const response = await fetch('/api/predict', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
+        predictResultsDiv.innerHTML = `<div class="text-center p-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div> AI分析中...</div>`;
+        adjustmentResultsDiv.innerHTML = '';
+        
+        const response = await fetch('/api/predict', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
         const result = await response.json();
-        lastPredictionData = result; // 保存数据供调整建议使用
+        lastPredictionData = result;
         
         if (result.error) {
             predictResultsDiv.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
             return;
         }
 
-        let verdictClass, statusText;
+        let verdictClass, titleClass, statusText;
         if (result.status === 'ok') {
-            verdictClass = 'verdict-ok';
-            statusText = '<strong class="status-text-ok">合格</strong>';
+            verdictClass = 'verdict-ok'; titleClass = 'verdict-title-ok'; statusText = '合格 (OK)';
         } else if (result.status === 'ng') {
-            verdictClass = 'verdict-ng';
-            statusText = '<strong class="status-text-ng">不合格</strong>';
+            verdictClass = 'verdict-ng'; titleClass = 'verdict-title-ng'; statusText = '不合格 (NG)';
         } else { // 'warning'
-            verdictClass = 'verdict-warning';
-            statusText = '<strong class="status-text-warning">合格 (有预警)</strong>';
+            verdictClass = 'verdict-warning'; titleClass = 'verdict-title-warning'; statusText = '合格 (有预警)';
         }
 
         let reasonsHTML = '<ul>' + result.verdict_reason.map(r => `<li>${r}</li>`).join('') + '</ul>';
 
+        // --- 核心修改 3: 新的诊断结论UI ---
         predictResultsDiv.innerHTML = `
-            <div class="card ${verdictClass}">
-                <div class="card-body">
-                    <h5 class="card-title">判定结果: ${statusText}</h5>
-                    <p class="card-text">合格概率: ${ (result.prob * 100).toFixed(2) }% (阈值: ${(result.threshold * 100).toFixed(2)}%)</p>
-                    <h6>诊断详情:</h6>
-                    ${reasonsHTML}
-                    <hr>
-                    <img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid">
-                    ${result.status !== 'ok' ? '<button id="get-adjustment-btn" class="btn btn-warning mt-3 w-100">获取优化建议</button>' : ''}
-                </div>
+            <div class="verdict-box ${verdictClass}">
+                <h3 class="section-header">诊断结论</h3>
+                <h4 class="${titleClass}">最终判定: ${statusText}</h4>
+                <p><strong>诊断依据:</strong></p>
+                ${reasonsHTML}
+                <hr>
+                <p><strong>AI模型内部判断:</strong></p>
+                <table class="table table-bordered w-50">
+                    <tbody>
+                        <tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr>
+                        <tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr>
+                    </tbody>
+                </table>
+                <hr>
+                <p><strong>SHAP可解释性分析图:</strong></p>
+                <img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid">
+                ${result.status !== 'ok' ? '<button id="get-adjustment-btn" class="btn btn-warning mt-3 w-100">获取优化建议</button>' : ''}
             </div>`;
     });
 
-    // --- !!! 核心修改：为“获取优化建议”按钮动态添加事件监听器 !!! ---
+    // --- 核心修改 1: 表格化优化建议 ---
     document.body.addEventListener('click', async e => {
         if (e.target && e.target.id === 'get-adjustment-btn') {
             e.target.disabled = true;
@@ -232,14 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!lastPredictionData) return;
 
-            const response = await fetch('/api/adjust', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    input_data: lastPredictionData.input_data,
-                    shap_values: lastPredictionData.shap_values
-                })
-            });
+            const response = await fetch('/api/adjust', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({input_data: lastPredictionData.input_data, shap_values: lastPredictionData.shap_values})});
             const result = await response.json();
             
             if (result.error) {
@@ -248,22 +245,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.target.textContent = '获取优化建议';
                 return;
             }
-
-            // 显示多条建议
-            let suggestionsHTML = `<div class="card"><div class="card-body">
-                <h5 class="card-title">智能优化建议</h5>
-                <p class="card-text">${result.message}</p>
-                <ul class="list-group list-group-flush">
+            
+            let tableHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="section-header">智能优化建议</h3>
+                        <p>${result.message}</p>
+                        <table class="table table-bordered suggestion-table">
+                            <thead>
+                                <tr>
+                                    <th>待调整特征</th><th>当前值</th><th>建议调整量</th><th>调整后目标值</th><th>此调整对OK概率的预期贡献</th>
+                                </tr>
+                            </thead>
+                            <tbody>
             `;
-            if (result.suggestions && result.suggestions.length > 0) {
-                result.suggestions.forEach(s => {
-                    suggestionsHTML += `<li class="list-group-item">${s}</li>`;
+            if (result.suggestions_table && result.suggestions_table.length > 0) {
+                result.suggestions_table.forEach(s => {
+                    tableHTML += `
+                        <tr>
+                            <td>${s.display_name}</td>
+                            <td>${s.current_value.toFixed(3)}</td>
+                            <td class="${s.adjustment_amount > 0 ? 'contribution-positive' : 'text-danger'}">${s.adjustment_amount > 0 ? '+' : ''}${s.adjustment_amount.toFixed(3)}</td>
+                            <td>${s.target_value.toFixed(3)}</td>
+                            <td class="contribution-positive">+${s.contribution.toFixed(2)}%</td>
+                        </tr>
+                    `;
                 });
             } else {
-                 suggestionsHTML += `<li class="list-group-item">未找到有效的建议。</li>`;
+                 tableHTML += `<tr><td colspan="5">未找到有效的建议。</td></tr>`;
             }
-            suggestionsHTML += `</ul></div></div>`;
-            adjustmentResultsDiv.innerHTML = suggestionsHTML;
+            tableHTML += `</tbody></table><p class="text-muted mt-2">${result.footer_note}</p></div></div>`;
+            adjustmentResultsDiv.innerHTML = tableHTML;
         }
     });
 });
