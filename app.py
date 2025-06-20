@@ -38,14 +38,10 @@ def fig_to_base64(fig):
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-# --- !!! 核心修改 1：重写建议生成函数，以表格化输出为目标 !!! ---
+# generate_tabular_adjustment_suggestions 函数保持不变，无需修改
 def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_values, golden_baseline):
-    """
-    生成表格化的、包含多参数的优化建议。
-    """
     suggestions_data = []
     problematic_params = {}
-
     current_df = pd.DataFrame([current_params])
     current_df['pressure_speed_ratio'] = current_df['F_cut_act'] / current_df['v_cut_act']
     current_df['stress_indicator'] = current_df['F_break_peak'] / current_df['t_glass_meas']
@@ -53,15 +49,11 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
     current_df.replace([np.inf, -np.inf], np.nan, inplace=True)
     current_df = current_df.fillna(model_cache.get('feature_defaults', {}))
     current_values_array = current_df[feature_names].values.flatten()
-    
-    # 识别所有问题参数及其负向SHAP值
     negative_shap_total = 0
     for i, feature in enumerate(feature_names):
         if any(k in feature for k in ['ratio', 'indicator', 'density']): continue
-
         is_out_of_baseline = False
-        is_shap_negative = shap_values[i] < -0.001  # SHAP值为负，表示对不合格（NG）有推动作用
-        
+        is_shap_negative = shap_values[i] < -0.001
         mean = golden_baseline['mean'].get(feature)
         std = golden_baseline['std'].get(feature)
         current_val = current_values_array[i]
@@ -69,7 +61,6 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
             upper_bound, lower_bound = mean + 3 * std, mean - 3 * std
             if not (lower_bound <= current_val <= upper_bound):
                 is_out_of_baseline = True
-        
         if is_out_of_baseline or is_shap_negative:
             problematic_params[feature] = {
                 'shap_value': shap_values[i], 'is_out_of_baseline': is_out_of_baseline,
@@ -77,75 +68,50 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
             }
             if is_shap_negative:
                 negative_shap_total += abs(shap_values[i])
-
-    if not problematic_params:
-        return [], "AI模型分析未找到明确的可优化参数。", ""
-
+    if not problematic_params: return [], "AI模型分析未找到明确的可优化参数。", ""
     sorted_problems = sorted(problematic_params.items(), key=lambda item: item[1]['shap_value'])
-    
     baseline_warning_param = None
     for feature_name, details in sorted_problems:
         if details['is_out_of_baseline']:
             baseline_warning_param = PARAM_MAP.get(feature_name, feature_name)
             break
-
     for feature_name, details in sorted_problems:
         adjustment = details['target_value'] - details['current_value']
         contribution = (abs(details['shap_value']) / negative_shap_total) * 100 if negative_shap_total > 0 and details['shap_value'] < 0 else 0
-        
         suggestions_data.append({
-            "display_name": PARAM_MAP.get(feature_name, feature_name),
-            "current_value": details['current_value'],
-            "adjustment_amount": adjustment,
-            "target_value": details['target_value'],
-            "contribution": contribution
+            "display_name": PARAM_MAP.get(feature_name, feature_name), "current_value": details['current_value'],
+            "adjustment_amount": adjustment, "target_value": details['target_value'], "contribution": contribution
         })
-    
     message = f"共生成 {len(suggestions_data)} 条优化建议，按影响力排序。"
     footer_note = f"优先修正超出基线的参数 '{baseline_warning_param}'。" if baseline_warning_param else "所有建议均基于提升合格率的AI模型分析。"
     return suggestions_data, message, footer_note
 
-
+# index 函数保持不变，无需修改
 @app.route('/', methods=['GET'])
 def index():
-    # --- !!! 核心修改 2：为模块一和三生成随机初始值 !!! ---
     model_ready = bool(model_cache.get('is_ready', False))
     displayable_params = []
     random_initial_values = {}
-
     if model_ready and 'param_map' in model_cache:
-        displayable_params = [
-            (k, v) for k, v in model_cache['param_map'].items()
-            if not any(x in k for x in ['product_id', 'ratio', 'indicator', 'density'])
-        ]
+        displayable_params = [(k, v) for k, v in model_cache['param_map'].items() if not any(x in k for x in ['product_id', 'ratio', 'indicator', 'density'])]
         gb = model_cache.get('golden_baseline', {})
         for key, _ in displayable_params:
-            mean = gb.get('mean', {}).get(key, 1) # Default to 1 to avoid zero
-            std = gb.get('std', {}).get(key, mean * 0.1) # Default std to 10% of mean
-            # Generate a random value within a reasonable range of the mean
+            mean = gb.get('mean', {}).get(key, 1)
+            std = gb.get('std', {}).get(key, mean * 0.1)
             random_val = mean + random.uniform(-1.5, 1.5) * std
             random_initial_values[key] = round(random_val, 2)
+    return render_template('index.html', model_ready=model_ready, cache=model_cache, displayable_params=displayable_params, random_initial_values=random_initial_values)
 
-    return render_template(
-        'index.html', model_ready=model_ready, cache=model_cache,
-        displayable_params=displayable_params, random_initial_values=random_initial_values
-    )
-
-# ... [ /train, /api/process_monitor, /api/recommend_params, /api/predict 路由保持不变 ] ...
-# 您的 /train, /api/process_monitor, /api/recommend_params, 和 /api/predict 路由函数无需修改，
-# 因为它们的逻辑和返回值已经能够支持新的UI需求。为简洁起见，这里省略了这些未改变的函数代码。
-# 请确保您本地文件中的这些函数保持原样。
+# --- !!! 核心修改 1：增强/train接口，添加数据分析和模型解读 !!! ---
 @app.route('/train', methods=['POST'])
 def train():
     global model_cache, PARAM_MAP
     model_cache.clear()
     if 'file' not in request.files:
-        flash("未选择文件", "error")
-        return redirect(url_for('index'))
+        flash("未选择文件", "error"); return redirect(url_for('index'))
     file = request.files['file']
     if not file or file.filename == '':
-        flash("文件无效或文件名为空", "error")
-        return redirect(url_for('index'))
+        flash("文件无效或文件名为空", "error"); return redirect(url_for('index'))
     try:
         df = pd.read_csv(io.StringIO(file.stream.read().decode("UTF8")))
         df['pressure_speed_ratio'] = df['F_cut_act'] / df['v_cut_act']
@@ -156,30 +122,36 @@ def train():
         X = df[features_to_use].copy()
         y = df["OK_NG"]
         X = X.fillna(X.mean())
-        count_ok, count_ng = y.value_counts().get(1, 0), y.value_counts().get(0, 0)
+
+        # --- 新增：数据分析 ---
+        total_samples = len(df)
+        count_ok = int(y.value_counts().get(1, 0))
+        count_ng = int(y.value_counts().get(0, 0))
+        data_analysis = {
+            'total_samples': total_samples, 'count_ok': count_ok, 'count_ng': count_ng,
+            'ok_percentage': (count_ok / total_samples) * 100 if total_samples > 0 else 0,
+            'ng_percentage': (count_ng / total_samples) * 100 if total_samples > 0 else 0
+        }
+
         scale_pos_weight_value = count_ng / count_ok if count_ok > 0 else 1
         clf = xgb.XGBClassifier(
-            n_estimators=150, max_depth=5, learning_rate=0.1, subsample=0.8,
-            colsample_bytree=0.8, gamma=0.1, random_state=42,
-            use_label_encoder=False, scale_pos_weight=scale_pos_weight_value,
-            eval_metric='logloss'
+            n_estimators=150, max_depth=5, learning_rate=0.1, subsample=0.8, colsample_bytree=0.8, 
+            gamma=0.1, random_state=42, use_label_encoder=False, 
+            scale_pos_weight=scale_pos_weight_value, eval_metric='logloss'
         )
         clf.fit(X, y)
         probs_ok = clf.predict_proba(X)[:, 1]
         best_f1_macro, best_thresh = 0.0, 0.5
         for t in np.arange(0.01, 1.0, 0.01):
             f1 = f1_score(y, (probs_ok >= t).astype(int), average='macro', zero_division=0)
-            if f1 > best_f1_macro:
-                best_f1_macro, best_thresh = f1, t
+            if f1 > best_f1_macro: best_f1_macro, best_thresh = f1, t
         fig_importance = plt.figure()
         xgb.plot_importance(clf, max_num_features=10, ax=plt.gca())
         plt.tight_layout()
         y_pred_final = (probs_ok >= best_thresh).astype(int)
         metrics = {
-            'accuracy': accuracy_score(y, y_pred_final),
-            'recall_ng': recall_score(y, y_pred_final, pos_label=0),
-            'precision_ng': precision_score(y, y_pred_final, pos_label=0),
-            'f1_ng': f1_score(y, y_pred_final, pos_label=0)
+            'accuracy': accuracy_score(y, y_pred_final), 'recall_ng': recall_score(y, y_pred_final, pos_label=0),
+            'precision_ng': precision_score(y, y_pred_final, pos_label=0), 'f1_ng': f1_score(y, y_pred_final, pos_label=0)
         }
         ok_df = df[df['OK_NG'] == 1]
         model_cache = {
@@ -188,6 +160,7 @@ def train():
             'golden_baseline': {'mean': ok_df[features_to_use].mean().to_dict(), 'std': ok_df[features_to_use].std().to_dict()},
             'knowledge_base': pd.DataFrame(ok_df),
             'feature_plot': fig_to_base64(fig_importance), 'metrics': metrics,
+            'data_analysis': data_analysis, # --- 新增：将数据分析结果存入缓存 ---
             'filename': file.filename, 'is_ready': True, 'param_map': PARAM_MAP
         }
         flash(f"文件 '{file.filename}' 上传成功，模型已完成训练！", "success")
@@ -195,6 +168,7 @@ def train():
         flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
+# 其他API路由 (/api/process_monitor, /api/recommend_params, /api/predict, /api/adjust) 保持不变
 @app.route('/api/process_monitor', methods=['POST'])
 def process_monitor():
     if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
@@ -273,15 +247,8 @@ def adjust():
     try:
         features, gb = model_cache['features'], model_cache['golden_baseline']
         input_data, shap_values = data.get('input_data'), data.get('shap_values')
-        
-        # 调用新的表格化建议函数
         suggestions, message, footer_note = generate_tabular_adjustment_suggestions(input_data, features, shap_values, gb)
-        
-        return jsonify({
-            'suggestions_table': suggestions, # 返回表格化数据
-            'message': message,
-            'footer_note': footer_note
-        })
+        return jsonify({ 'suggestions_table': suggestions, 'message': message, 'footer_note': footer_note })
     except Exception as e:
         app.logger.error(f"参数调整时出错: {e}", exc_info=True)
         return jsonify({'error': f'参数调整失败: {str(e)}'}), 500
