@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.0</title>
+    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.1</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
@@ -19,7 +19,7 @@
         .suggestion-table th { background-color: #0d6efd; color: white; }
         .contribution-positive { color: #28a745; font-weight: bold; }
         @keyframes flash-warning { 0%, 100% { background-color: #fff3cd; box-shadow: 0 0 8px #ffc107; } 50% { background-color: #ffc107; box-shadow: none; } }
-        .input-warning { animation: flash-warning 1s infinite; }
+        .input-warning { animation: flash-warning 1s 2; } /* Flash twice then stop */
         @keyframes highlight-module { 0%, 100% { box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.5); } 50% { box-shadow: 0 0 15px 5px rgba(13, 110, 253, 1); } }
         .module-highlight { animation: highlight-module 1s 1; }
     </style>
@@ -29,73 +29,18 @@
     <h1 class="text-center mb-4">智能玻璃质检系统 (IQCS)</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
 
-    <div class="card">
-        <div class="card-body">
-            <h2 class="section-header">步骤一：上传数据并训练AI模型</h2>
-            <form action="{{ url_for('train') }}" method="post" enctype="multipart/form-data"><div class="input-group"><input type="file" class="form-control" name="file" required><button class="btn btn-primary" type="submit">上传并训练</button></div></form>
-        </div>
-    </div>
+    <div class="card"><div class="card-body"><h2 class="section-header">步骤一：上传数据并训练AI模型</h2><form action="{{ url_for('train') }}" method="post" enctype="multipart/form-data"><div class="input-group"><input type="file" class="form-control" name="file" required><button class="btn btn-primary" type="submit">上传并训练</button></div></form></div></div>
 
     {% if model_ready %}
     <div class="card"><div class="card-body"><h2 class="section-header">训练结果概览 (基于文件: {{ cache.filename }})</h2><div class="row"><div class="col-md-6"><h3>模型性能指标</h3><table class="table table-bordered"><tbody><tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr><tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr><tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr><tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr></tbody></table><div class="mt-4"><h3>模型解读与数据分析</h3><p>本系统采用<strong>XGBoost</strong>算法，通过组合多个决策树来构建强大的预测模型，尤其擅长处理工业领域的复杂表格数据。</p><ul class="list-group"><li class="list-group-item d-flex justify-content-between align-items-center">总样本数<span class="badge bg-primary rounded-pill">{{ cache.data_analysis.total_samples }}</span></li><li class="list-group-item d-flex justify-content-between align-items-center">合格品 (OK) 数量<span class="badge bg-success rounded-pill">{{ cache.data_analysis.count_ok }} ({{ "%.2f%%"|format(cache.data_analysis.ok_percentage) }})</span></li><li class="list-group-item d-flex justify-content-between align-items-center">不合格品 (NG) 数量<span class="badge bg-danger rounded-pill">{{ cache.data_analysis.count_ng }} ({{ "%.2f%%"|format(cache.data_analysis.ng_percentage) }})</span></li></ul></div></div><div class="col-md-6"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" class="img-fluid"></div></div></div></div>
     
-    <!-- --- !!! 核心修改 1: 恢复模块二“AI工艺员” !!! --- -->
-    <div class="card">
-        <div class="card-body">
-            <h2 class="section-header">模块二：AI工艺员 (手动查询)</h2>
-            <div class="row">
-                <div class="col-md-6">
-                    <form id="recommend-form">
-                        <div class="mb-3"><label for="product_id" class="form-label">产品ID</label><input type="text" class="form-control" id="product_id" name="product_id" value="DefaultProduct"></div>
-                        <button type="submit" class="btn btn-success w-100">获取推荐参数</button>
-                    </form>
-                </div>
-                <div class="col-md-6">
-                    <div id="recommend-results"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="card"><div class="card-body"><h2 class="section-header">模块二：AI工艺员 (手动查询)</h2><div class="row align-items-center"><div class="col-md-5"><form id="recommend-form"><div class="mb-3"><label for="product_id" class="form-label">产品ID</label><input type="text" class="form-control" id="product_id" name="product_id" value="DefaultProduct"></div><button type="submit" class="btn btn-success w-100">获取推荐参数</button></form></div><div class="col-md-7"><div id="recommend-results" class="mt-3 mt-md-0"></div></div></div></div></div>
 
-    <div class="card">
-        <div class="card-body">
-            <h2 class="section-header">步骤三：连续生产模拟</h2>
-            <div class="d-flex justify-content-between align-items-center">
-                <div><button id="start-sim-btn" class="btn btn-lg btn-success"><i class="bi bi-play-circle-fill"></i> 开始模拟</button><button id="stop-sim-btn" class="btn btn-lg btn-danger" disabled><i class="bi bi-stop-circle-fill"></i> 结束模拟</button></div>
-                <div><button id="export-ok-btn" class="btn btn-outline-success" disabled><i class="bi bi-clipboard-check"></i> 复制合格品</button><button id="export-ng-btn" class="btn btn-outline-danger" disabled><i class="bi bi-clipboard-x"></i> 复制不合格品</button></div>
-            </div>
-        </div>
-    </div>
+    <div class="card"><div class="card-body"><h2 class="section-header">步骤三：连续生产模拟</h2><div class="d-flex justify-content-between align-items-center"><div><button id="start-sim-btn" class="btn btn-lg btn-success"><i class="bi bi-play-circle-fill"></i> 开始模拟</button><button id="stop-sim-btn" class="btn btn-lg btn-danger" disabled><i class="bi bi-stop-circle-fill"></i> 结束模拟</button></div><div><button id="export-ok-btn" class="btn btn-outline-success" disabled><i class="bi bi-clipboard-check"></i> 复制合格品</button><button id="export-ng-btn" class="btn btn-outline-danger" disabled><i class="bi bi-clipboard-x"></i> 复制不合格品</button></div></div></div></div>
     
     <div class="row">
-        <div class="col-lg-4">
-            <div id="module-monitor-card" class="card h-100">
-                <div class="card-body">
-                    <h3 class="section-header">模块一：产线心电图</h3>
-                    <p class="small text-muted">实时生成的参数将在此展示并进行基线预警。</p>
-                    <form id="monitor-form">
-                        <!-- --- !!! 核心修改 2a: 显示黄金基准范围 !!! --- -->
-                        {% for key, name in displayable_params %}
-                        <div class="mb-2">
-                            <label class="form-label small d-flex justify-content-between">
-                                <span>{{ name }}</span>
-                                <span class="text-muted fw-normal">{{ baseline_ranges.get(key, '') }}</span>
-                            </label>
-                            <input type="number" step="any" class="form-control form-control-sm" id="monitor-{{ key }}" name="{{ key }}" readonly>
-                        </div>
-                        {% endfor %}
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-8">
-            <div id="module-predict-card" class="card h-100">
-                <div class="card-body">
-                    <h3 class="section-header">模块三：AI侦探实时诊断</h3>
-                    <div id="predict-results" class="mt-3"><div class="text-center text-muted p-5">等待模拟数据流入...</div></div>
-                </div>
-            </div>
-        </div>
+        <div class="col-lg-4"><div id="module-monitor-card" class="card h-100"><div class="card-body"><h3 class="section-header">模块一：产线心电图</h3><div id="monitor-header" class="mb-3"></div><form id="monitor-form">{% for key, name in displayable_params %}<div class="mb-2"><label class="form-label small d-flex justify-content-between"><span>{{ name }}</span><span class="text-muted fw-normal">{{ baseline_ranges.get(key, '') }}</span></label><input type="number" step="any" class="form-control form-control-sm" id="monitor-{{ key }}" name="{{ key }}" readonly></div>{% endfor %}</form></div></div></div>
+        <div class="col-lg-8"><div id="module-predict-card" class="card h-100"><div class="card-body"><h3 class="section-header">模块三：AI侦探实时诊断</h3><div id="predict-results" class="mt-3"><div class="text-center text-muted p-5">等待模拟开始...</div></div></div></div></div>
     </div>
 
     <div class="row mt-4">
@@ -112,7 +57,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('start-sim-btn')) return;
 
-    // --- 恢复模块二的JS ---
     const recommendForm = document.getElementById('recommend-form');
     if(recommendForm) {
         recommendForm.addEventListener('submit', async e => {
@@ -124,7 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const resultsDiv = document.getElementById('recommend-results');
             let paramsHTML = `<div class="alert alert-info">${result.message}</div><ul class="list-group">`;
             for (let key in result.recommended_params) {
-                paramsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${result.param_map[key] || key}<span class="badge bg-primary rounded-pill">${parseFloat(result.recommended_params[key]).toFixed(3)}</span></li>`;
+                if (result.param_map[key]) {
+                    paramsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${result.param_map[key]}<span class="badge bg-primary rounded-pill">${parseFloat(result.recommended_params[key]).toFixed(3)}</span></li>`;
+                }
             }
             paramsHTML += '</ul>';
             resultsDiv.innerHTML = paramsHTML;
@@ -136,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportOkBtn = document.getElementById('export-ok-btn');
     const exportNgBtn = document.getElementById('export-ng-btn');
     const monitorCard = document.getElementById('module-monitor-card');
+    const monitorHeader = document.getElementById('monitor-header');
     const predictResultsDiv = document.getElementById('predict-results');
     const okTableBody = document.getElementById('ok-table-body');
     const ngTableBody = document.getElementById('ng-table-body');
@@ -151,15 +98,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (result.status === 'ok') { verdictClass = 'verdict-ok'; titleClass = 'verdict-title-ok'; statusText = '合格 (OK)'; } 
         else { verdictClass = 'verdict-ng'; titleClass = 'verdict-title-ng'; statusText = '不合格 (NG)'; }
         let reasonsHTML = '<ul>' + result.verdict_reason.map(r => `<li>${r}</li>`).join('') + '</ul>';
-
         targetDiv.innerHTML = `<div class="row g-4"><div class="col-lg-7"><div class="verdict-box ${verdictClass}"><h4 class="section-header">诊断结论</h4><h5 class="${titleClass}">最终判定: ${statusText}</h5><p><strong>诊断依据:</strong></p>${reasonsHTML}<hr><p><strong>AI模型内部判断:</strong></p><table class="table table-bordered" style="width: auto;"><tbody><tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr><tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr></tbody></table></div></div><div class="col-lg-5"><div class="verdict-box" style="background-color: #fff; border: 1px solid #ddd;"><h4 class="section-header">SHAP可解释性分析</h4><img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid"></div></div></div>`;
     };
     
-    // --- !!! 核心修改 2b & 3：修复数据流，增强弹窗 !!! ---
     const runSimulationStep = async () => {
         const genResponse = await fetch('/api/simulation/generate');
         const genData = await genResponse.json();
         if (genData.error) { stopSimulation(); alert(`模拟出错: ${genData.error}`); return; }
+        
+        monitorHeader.innerHTML = `<div class="alert alert-secondary p-2 small"><strong>ID:</strong> ${genData.product_id}<br><strong>时间:</strong> ${genData.timestamp}</div>`;
         const monitorForm = document.getElementById('monitor-form');
         monitorForm.querySelectorAll('input').forEach(input => {
             input.classList.remove('input-warning');
@@ -170,8 +117,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         monitorCard.classList.add('module-highlight');
         setTimeout(() => monitorCard.classList.remove('module-highlight'), 1000);
+
+        predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">AI侦探正在分析...</p></div>';
         
-        const predResponse = await fetch('/api/simulation/get_full_prediction', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(genData.params) });
+        const predResponse = await fetch('/api/simulation/get_full_prediction', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({'params': genData.params, 'product_id': genData.product_id}) });
         const predResult = await predResponse.json();
         if (predResult.error) { stopSimulation(); alert(`判定出错: ${predResult.error}`); return; }
         
@@ -191,11 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
         historicalRecords = {}; okTableBody.innerHTML = ''; ngTableBody.innerHTML = '';
         okCountBadge.textContent = '0'; ngCountBadge.textContent = '0';
         predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">模拟即将开始...</p></div>';
-        
-        // 立即执行第一次，然后设置定时器
         setTimeout(() => {
             runSimulationStep();
-            // --- !!! 核心修改 2a: 延长周期到15秒 !!! ---
             simulationInterval = setInterval(runSimulationStep, 15000);
         }, 1000); 
     };
@@ -209,8 +155,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportData = (status) => {
         const dataToExport = Object.values(historicalRecords).filter(r => r.status === status);
         if (dataToExport.length === 0) { alert(`没有${status === 'ok' ? '合格' : '不合格'}品数据可复制。`); return; }
-        const headers = Object.keys(dataToExport[0].params).join(',');
-        const rows = dataToExport.map(record => Object.values(record.params).map(val => typeof val === 'string' ? `"${val}"` : val).join(','));
+        const dataForCsv = dataToExport.map(r => r.params);
+        const headers = Object.keys(dataForCsv[0]).join(',');
+        const rows = dataForCsv.map(record => Object.values(record).map(val => typeof val === 'string' ? `"${val}"` : val).join(','));
         const csvContent = `${headers}\n${rows.join('\n')}`;
         navigator.clipboard.writeText(csvContent).then(() => alert(`${dataToExport.length}条${status === 'ok' ? '合格' : '不合格'}品数据已复制到剪贴板！`), () => alert('复制失败！'));
     };
@@ -231,7 +178,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const adjustmentDiv = document.getElementById('adjustment-controls');
             adjustmentDiv.innerHTML = '';
-            // --- !!! 核心修改 3：不合格品弹窗内显示获取建议按钮 !!! ---
             if (record.status === 'ng') {
                 adjustmentDiv.innerHTML = '<button id="get-modal-adjustment-btn" class="btn btn-warning w-100">获取优化建议</button><div id="modal-adjustment-results" class="mt-3"></div>';
             }
