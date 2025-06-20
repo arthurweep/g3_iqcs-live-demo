@@ -33,19 +33,12 @@ model_cache = {}
 
 # 辅助函数和建议生成函数 (保持不变)
 def fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches='tight')
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode('utf-8')
-
+    buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches='tight'); plt.close(fig); return base64.b64encode(buf.getvalue()).decode('utf-8')
 def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_values, golden_baseline):
     suggestions_data, problematic_params, negative_shap_total = [], {}, 0
     current_df = pd.DataFrame([current_params])
-    current_df['pressure_speed_ratio'] = current_df['F_cut_act'] / current_df['v_cut_act']
-    current_df['stress_indicator'] = current_df['F_break_peak'] / current_df['t_glass_meas']
-    current_df['energy_density'] = current_df['F_cut_act'] * current_df['v_cut_act']
-    current_df.replace([np.inf, -np.inf], np.nan, inplace=True)
-    current_df = current_df.fillna(model_cache.get('feature_defaults', {}))
+    current_df['pressure_speed_ratio'] = current_df['F_cut_act'] / current_df['v_cut_act']; current_df['stress_indicator'] = current_df['F_break_peak'] / current_df['t_glass_meas']; current_df['energy_density'] = current_df['F_cut_act'] * current_df['v_cut_act']
+    current_df.replace([np.inf, -np.inf], np.nan, inplace=True); current_df = current_df.fillna(model_cache.get('feature_defaults', {}))
     current_values_array = current_df[feature_names].values.flatten()
     for i, feature in enumerate(feature_names):
         if any(k in feature for k in ['ratio', 'indicator', 'density']): continue
@@ -63,40 +56,22 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
         suggestions_data.append({"display_name": PARAM_MAP.get(feature_name, feature_name), "current_value": details['current_value'], "adjustment_amount": adjustment, "target_value": details['target_value'], "contribution": contribution})
     return suggestions_data, f"共生成 {len(suggestions_data)} 条优化建议。", "基于AI模型分析，修正以下参数可最大化提升合格率。"
 
-# --- !!! 核心修改 1：主页函数现在会预计算基线范围 !!! ---
+# 主页和训练路由 (保持不变)
 @app.route('/', methods=['GET'])
 def index():
-    model_ready = bool(model_cache.get('is_ready', False))
-    displayable_params = []
-    baseline_ranges = {}
-    
+    model_ready = bool(model_cache.get('is_ready', False)); displayable_params = []; baseline_ranges = {}
     if model_ready:
-        all_params = model_cache.get('param_map', {})
-        gb = model_cache.get('golden_baseline', {})
+        all_params = model_cache.get('param_map', {}); gb = model_cache.get('golden_baseline', {})
         for key, name in all_params.items():
             if not any(x in key for x in ['product_id', 'ratio', 'indicator', 'density']):
                 displayable_params.append((key, name))
-                # 预计算基线范围，以便在前端显示
-                mean = gb.get('mean', {}).get(key)
-                std = gb.get('std', {}).get(key)
-                if mean is not None and std is not None:
-                    lower = mean - 3 * std
-                    upper = mean + 3 * std
-                    baseline_ranges[key] = f"[{lower:.2f} ~ {upper:.2f}]"
+                mean, std = gb.get('mean', {}).get(key), gb.get('std', {}).get(key)
+                if mean is not None and std is not None: baseline_ranges[key] = f"[{mean - 3 * std:.2f} ~ {mean + 3 * std:.2f}]"
+    return render_template('index.html', model_ready=model_ready, cache=model_cache, displayable_params=displayable_params, baseline_ranges=baseline_ranges)
 
-    return render_template(
-        'index.html', 
-        model_ready=model_ready, 
-        cache=model_cache,
-        displayable_params=displayable_params,
-        baseline_ranges=baseline_ranges # 将基线范围传递给模板
-    )
-
-# 训练路由 (保持不变)
 @app.route('/train', methods=['POST'])
 def train():
-    global model_cache, PARAM_MAP
-    model_cache.clear()
+    global model_cache, PARAM_MAP; model_cache.clear()
     if 'file' not in request.files: flash("未选择文件", "error"); return redirect(url_for('index'))
     file = request.files['file']
     if not file or file.filename == '': flash("文件无效或文件名为空", "error"); return redirect(url_for('index'))
@@ -126,50 +101,61 @@ def train():
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
-# 模拟相关的API路由 (保持不变)
+# --- !!! 核心修改 2: 增强模拟生成API !!! ---
 @app.route('/api/simulation/generate', methods=['GET'])
 def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
-    params, warnings = {}, []
-    gb = model_cache['golden_baseline']
+    params, warnings, gb = {}, [], model_cache['golden_baseline']
     features = [f for f in PARAM_MAP.keys() if f not in ['product_id', 'pressure_speed_ratio', 'stress_indicator', 'energy_density']]
     for feature in features:
         mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
         val = mean + random.uniform(-1.5, 1.5) * std * (3 if random.random() < 0.3 else 1)
         params[feature] = val
-        if not (mean - 3 * std <= val <= mean + 3 * std):
-            warnings.append(feature)
-    return jsonify({'params': params, 'warnings': warnings})
+        if not (mean - 3 * std <= val <= mean + 3 * std): warnings.append(feature)
+    
+    return jsonify({
+        'params': params, 
+        'warnings': warnings,
+        'product_id': f"SIM-{str(uuid.uuid4())[:8]}", # 新增产品ID
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 新增时间戳
+    })
 
+# --- !!! 核心修改 3: 修复SHAP绘图错误 !!! ---
 @app.route('/api/simulation/get_full_prediction', methods=['POST'])
 def get_full_prediction():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     data = request.get_json()
-    batch_id = str(uuid.uuid4())[:8]
-    data['product_id'] = f"SIM-{batch_id}"
-    features = model_cache['features']; input_df = pd.DataFrame([data])
+    features = model_cache['features']; input_df = pd.DataFrame([data['params']]) # 使用'params'子对象
     input_df['pressure_speed_ratio'] = input_df['F_cut_act'] / input_df['v_cut_act']
     input_df['stress_indicator'] = input_df['F_break_peak'] / input_df['t_glass_meas']
     input_df['energy_density'] = input_df['F_cut_act'] * input_df['v_cut_act']
     input_df.replace([np.inf, -np.inf], np.nan, inplace=True); input_df = input_df.fillna(model_cache['feature_defaults']); input_vector = input_df[features]
-    model = model_cache['model']; explainer = shap.TreeExplainer(model); shap_values_raw = explainer.shap_values(input_vector)
-    shap_values = shap_values_raw[0] if isinstance(shap_values_raw, list) and len(shap_values_raw) > 0 else shap_values_raw
+    
+    model = model_cache['model']; explainer = shap.TreeExplainer(model)
+    shap_values_raw = explainer.shap_values(input_vector)
+    # --- 关键修复：确保传递给SHAP图的是一维数组 ---
+    shap_values = shap_values_raw[0] if isinstance(shap_values_raw, list) and len(shap_values_raw) > 0 and isinstance(shap_values_raw[0], np.ndarray) else shap_values_raw
+    
     prob_ok = model.predict_proba(input_vector)[0, 1]
     model_says_ng = bool(prob_ok < model_cache['best_threshold'])
     final_status = "ng" if model_says_ng else "ok"
+    
     baseline_warnings = []
     gb = model_cache['golden_baseline']
-    for feature, val in data.items():
+    for feature, val in data['params'].items():
         if feature in gb['mean']:
             m, s = gb['mean'][feature], gb['std'][feature]
             if not (m - 3*s <= val <= m + 3*s):
                 baseline_warnings.append(f"参数 '{PARAM_MAP.get(feature, feature)}' 超出黄金基线。")
+    
     verdict_reason = [f"AI模型预测合格概率为 {prob_ok:.2%}"] + baseline_warnings
+    
     fig = plt.figure()
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10)
     plt.tight_layout()
+    
     return jsonify({
-        'id': data['product_id'], 'params': data, 'status': final_status, 'prob': float(prob_ok), 
+        'id': data['product_id'], 'params': data['params'], 'status': final_status, 'prob': float(prob_ok), 
         'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(),
         'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)
     })
@@ -178,11 +164,8 @@ def get_full_prediction():
 @app.route('/api/recommend_params', methods=['POST'])
 def recommend_params():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
-    req_data = request.get_json()
-    product_id = req_data.get('product_id', 'DefaultProduct')
-    # 作为一个演示，这里我们直接返回黄金基线的均值
-    gb_mean = model_cache.get('golden_baseline', {}).get('mean', {})
-    params = {k: v for k, v in gb_mean.items() if k in model_cache.get('features', []) and k != 'product_id'}
+    req_data = request.get_json(); product_id = req_data.get('product_id', 'DefaultProduct')
+    gb_mean = model_cache.get('golden_baseline', {}).get('mean', {}); params = {k: v for k, v in gb_mean.items() if k in model_cache.get('features', []) and k != 'product_id'}
     msg = f"为产品'{product_id}'生成了推荐工艺参数(基于黄金基线均值)。"
     return jsonify({'product_id': product_id, 'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
 
@@ -202,4 +185,3 @@ def adjust():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-
