@@ -88,7 +88,7 @@ def train():
         fig_importance = plt.figure(); xgb.plot_importance(clf, max_num_features=10, ax=plt.gca()); plt.tight_layout()
         y_pred_final = (probs_ok >= best_thresh).astype(int)
         metrics = {'accuracy': accuracy_score(y, y_pred_final), 'recall_ng': recall_score(y, y_pred_final, pos_label=0), 'precision_ng': precision_score(y, y_pred_final, pos_label=0), 'f1_ng': f1_score(y, y_pred_final, pos_label=0)}
-        ok_df = df[df['OK_NG'] == 1].copy(); ng_df = df[df['OK_NG'] == 0].copy()
+        ok_df = df[df['OK_NG'] == 1].copy(); ng_df = df[df['OK_NG'] == 0].copy() # --- 分离OK和NG数据 ---
         knn_model, ok_df_features = None, ok_df[features_to_use]
         if not ok_df_features.empty:
             knn_model = NearestNeighbors(n_neighbors=5, algorithm='ball_tree'); knn_model.fit(ok_df_features)
@@ -103,7 +103,6 @@ def train():
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
-# --- !!! 核心修改 2: 增强的失效模拟 !!! ---
 @app.route('/api/simulation/generate', methods=['GET'])
 def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
@@ -176,4 +175,3 @@ def adjust():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-
