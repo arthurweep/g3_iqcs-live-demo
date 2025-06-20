@@ -144,12 +144,19 @@ def get_full_prediction():
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10); plt.tight_layout()
     return jsonify({'id': data['product_id'], 'params': data['params'], 'status': final_status, 'prob': float(prob_ok), 'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(), 'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)})
 
+# --- !!! 核心修改 1: 修复AI工艺员的KNN调用错误 !!! ---
 @app.route('/api/recommend_params', methods=['POST'])
 def recommend_params():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     knn_model, ok_df = model_cache.get('knn_model'), model_cache.get('ok_df_for_knn')
     if knn_model is None or ok_df is None or ok_df.empty: return jsonify({'error': '推荐模型不可用，合格品数据不足。'}), 400
-    query_point = [model_cache['feature_defaults']]; distances, indices = knn_model.kneighbors(query_point)
+    
+    # --- 关键修复：将查询点转换为具有正确列顺序的DataFrame ---
+    query_dict = model_cache['feature_defaults']
+    query_df = pd.DataFrame([query_dict])[model_cache['features']] # 确保列序正确
+
+    distances, indices = knn_model.kneighbors(query_df)
+    
     recommended_params_df = ok_df.iloc[indices[0]].mean(); params = recommended_params_df.to_dict()
     msg = f"已通过机器学习(KNN)从{len(indices[0])}个最优历史案例中生成推荐参数。"
     return jsonify({'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
