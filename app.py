@@ -56,7 +56,6 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
         suggestions_data.append({"display_name": PARAM_MAP.get(feature_name, feature_name), "current_value": details['current_value'], "adjustment_amount": adjustment, "target_value": details['target_value'], "contribution": contribution})
     return suggestions_data, f"共生成 {len(suggestions_data)} 条优化建议。", "基于AI模型分析，修正以下参数可最大化提升合格率。"
 
-# 主页和训练路由 (保持不变)
 @app.route('/', methods=['GET'])
 def index():
     model_ready = bool(model_cache.get('is_ready', False)); displayable_params = []; baseline_ranges = {}
@@ -101,7 +100,6 @@ def train():
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
-# --- !!! 核心修改 2: 增强模拟生成API !!! ---
 @app.route('/api/simulation/generate', methods=['GET'])
 def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
@@ -112,55 +110,40 @@ def generate_simulated_data():
         val = mean + random.uniform(-1.5, 1.5) * std * (3 if random.random() < 0.3 else 1)
         params[feature] = val
         if not (mean - 3 * std <= val <= mean + 3 * std): warnings.append(feature)
-    
-    return jsonify({
-        'params': params, 
-        'warnings': warnings,
-        'product_id': f"SIM-{str(uuid.uuid4())[:8]}", # 新增产品ID
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 新增时间戳
-    })
+    return jsonify({'params': params, 'warnings': warnings, 'product_id': f"SIM-{str(uuid.uuid4())[:8]}", 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
 
-# --- !!! 核心修改 3: 修复SHAP绘图错误 !!! ---
 @app.route('/api/simulation/get_full_prediction', methods=['POST'])
 def get_full_prediction():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     data = request.get_json()
-    features = model_cache['features']; input_df = pd.DataFrame([data['params']]) # 使用'params'子对象
-    input_df['pressure_speed_ratio'] = input_df['F_cut_act'] / input_df['v_cut_act']
-    input_df['stress_indicator'] = input_df['F_break_peak'] / input_df['t_glass_meas']
-    input_df['energy_density'] = input_df['F_cut_act'] * input_df['v_cut_act']
+    features = model_cache['features']; input_df = pd.DataFrame([data['params']])
+    input_df['pressure_speed_ratio'] = input_df['F_cut_act'] / input_df['v_cut_act']; input_df['stress_indicator'] = input_df['F_break_peak'] / input_df['t_glass_meas']; input_df['energy_density'] = input_df['F_cut_act'] * input_df['v_cut_act']
     input_df.replace([np.inf, -np.inf], np.nan, inplace=True); input_df = input_df.fillna(model_cache['feature_defaults']); input_vector = input_df[features]
+    model = model_cache['model']; explainer = shap.TreeExplainer(model); shap_values_raw = explainer.shap_values(input_vector)
     
-    model = model_cache['model']; explainer = shap.TreeExplainer(model)
-    shap_values_raw = explainer.shap_values(input_vector)
-    # --- 关键修复：确保传递给SHAP图的是一维数组 ---
+    # --- !!! 核心修改 2: 修复SHAP绘图错误 !!! ---
     shap_values = shap_values_raw[0] if isinstance(shap_values_raw, list) and len(shap_values_raw) > 0 and isinstance(shap_values_raw[0], np.ndarray) else shap_values_raw
+    if shap_values.ndim > 1: shap_values = shap_values.flatten()
     
     prob_ok = model.predict_proba(input_vector)[0, 1]
     model_says_ng = bool(prob_ok < model_cache['best_threshold'])
     final_status = "ng" if model_says_ng else "ok"
-    
     baseline_warnings = []
     gb = model_cache['golden_baseline']
     for feature, val in data['params'].items():
         if feature in gb['mean']:
             m, s = gb['mean'][feature], gb['std'][feature]
-            if not (m - 3*s <= val <= m + 3*s):
-                baseline_warnings.append(f"参数 '{PARAM_MAP.get(feature, feature)}' 超出黄金基线。")
-    
+            if not (m - 3*s <= val <= m + 3*s): baseline_warnings.append(f"参数 '{PARAM_MAP.get(feature, feature)}' 超出黄金基线。")
     verdict_reason = [f"AI模型预测合格概率为 {prob_ok:.2%}"] + baseline_warnings
-    
     fig = plt.figure()
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10)
     plt.tight_layout()
-    
     return jsonify({
         'id': data['product_id'], 'params': data['params'], 'status': final_status, 'prob': float(prob_ok), 
         'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(),
         'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)
     })
 
-# AI工艺员和调整建议API (保持不变)
 @app.route('/api/recommend_params', methods=['POST'])
 def recommend_params():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
@@ -171,7 +154,7 @@ def recommend_params():
 
 @app.route('/api/adjust', methods=['POST'])
 def adjust():
-    if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
+    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
     data = request.get_json()
     try:
         features, gb = model_cache['features'], model_cache['golden_baseline']
