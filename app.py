@@ -14,7 +14,7 @@ import shap
 import xgboost as xgb
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from sklearn.neighbors import NearestNeighbors # --- !!! 核心修改 1a: 引入KNN !!! ---
+from sklearn.neighbors import NearestNeighbors
 
 # 配置
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'sans-serif']; plt.rcParams['axes.unicode_minus'] = False
@@ -89,20 +89,14 @@ def train():
         y_pred_final = (probs_ok >= best_thresh).astype(int)
         metrics = {'accuracy': accuracy_score(y, y_pred_final), 'recall_ng': recall_score(y, y_pred_final, pos_label=0), 'precision_ng': precision_score(y, y_pred_final, pos_label=0), 'f1_ng': f1_score(y, y_pred_final, pos_label=0)}
         ok_df = df[df['OK_NG'] == 1].copy()
-        
-        # --- !!! 核心修改 1a: 训练并缓存KNN推荐模型 !!! ---
-        knn_model = None
-        ok_df_features = ok_df[features_to_use]
+        knn_model, ok_df_features = None, ok_df[features_to_use]
         if not ok_df_features.empty:
-            knn_model = NearestNeighbors(n_neighbors=5, algorithm='ball_tree')
-            knn_model.fit(ok_df_features)
-
+            knn_model = NearestNeighbors(n_neighbors=5, algorithm='ball_tree'); knn_model.fit(ok_df_features)
         model_cache = {
             'model': clf, 'features': features_to_use, 'best_threshold': best_thresh, 'feature_defaults': X.mean().to_dict(),
             'golden_baseline': {'mean': ok_df[features_to_use].mean().to_dict(), 'std': ok_df[features_to_use].std().to_dict()},
-            'ok_df_for_knn': ok_df_features, 'knn_model': knn_model, # 缓存KNN模型和数据
-            'feature_plot': fig_to_base64(fig_importance), 'metrics': metrics, 'data_analysis': data_analysis,
-            'filename': file.filename, 'is_ready': True, 'param_map': PARAM_MAP
+            'ok_df_for_knn': ok_df_features, 'knn_model': knn_model, 'feature_plot': fig_to_base64(fig_importance), 
+            'metrics': metrics, 'data_analysis': data_analysis, 'filename': file.filename, 'is_ready': True, 'param_map': PARAM_MAP
         }
         flash(f"文件 '{file.filename}' 上传成功，分类器与推荐模型已完成训练！", "success")
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
@@ -113,10 +107,19 @@ def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     params, warnings, gb = {}, [], model_cache['golden_baseline']
     features = [f for f in PARAM_MAP.keys() if f not in ['product_id', 'pressure_speed_ratio', 'stress_indicator', 'energy_density']]
+    is_failure_scenario = random.random() < (1/6)
     for feature in features:
         mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
-        val = mean + random.uniform(-1.5, 1.5) * std * (3 if random.random() < 0.3 else 1)
+        val = mean + random.uniform(-1.5, 1.5) * std
         params[feature] = val
+    if is_failure_scenario and len(features) > 1:
+        num_outliers = random.randint(1, 2)
+        outlier_features = random.sample(features, num_outliers)
+        for feature in outlier_features:
+            mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
+            params[feature] = mean + random.choice([-1, 1]) * random.uniform(3.5, 5.0) * std
+    for feature, val in params.items():
+        mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
         if not (mean - 3 * std <= val <= mean + 3 * std): warnings.append(feature)
     return jsonify({'params': params, 'warnings': warnings, 'product_id': f"SIM-{str(uuid.uuid4())[:8]}", 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
 
@@ -141,22 +144,13 @@ def get_full_prediction():
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10); plt.tight_layout()
     return jsonify({'id': data['product_id'], 'params': data['params'], 'status': final_status, 'prob': float(prob_ok), 'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(), 'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)})
 
-# --- !!! 核心修改 1b: 实现基于KNN的智能推荐 !!! ---
 @app.route('/api/recommend_params', methods=['POST'])
 def recommend_params():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
-    knn_model = model_cache.get('knn_model')
-    ok_df = model_cache.get('ok_df_for_knn')
-    if knn_model is None or ok_df is None or ok_df.empty:
-        return jsonify({'error': '推荐模型不可用，合格品数据不足。'}), 400
-    
-    # 为简单起见，我们用所有合格品均值作为查询点，寻找最典型的优良工艺
-    query_point = [model_cache['feature_defaults']]
-    distances, indices = knn_model.kneighbors(query_point)
-    
-    # 平均最近邻的参数作为推荐值
-    recommended_params_df = ok_df.iloc[indices[0]].mean()
-    params = recommended_params_df.to_dict()
+    knn_model, ok_df = model_cache.get('knn_model'), model_cache.get('ok_df_for_knn')
+    if knn_model is None or ok_df is None or ok_df.empty: return jsonify({'error': '推荐模型不可用，合格品数据不足。'}), 400
+    query_point = [model_cache['feature_defaults']]; distances, indices = knn_model.kneighbors(query_point)
+    recommended_params_df = ok_df.iloc[indices[0]].mean(); params = recommended_params_df.to_dict()
     msg = f"已通过机器学习(KNN)从{len(indices[0])}个最优历史案例中生成推荐参数。"
     return jsonify({'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
 
