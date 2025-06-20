@@ -63,32 +63,40 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
         suggestions_data.append({"display_name": PARAM_MAP.get(feature_name, feature_name), "current_value": details['current_value'], "adjustment_amount": adjustment, "target_value": details['target_value'], "contribution": contribution})
     return suggestions_data, f"共生成 {len(suggestions_data)} 条优化建议。", "基于AI模型分析，修正以下参数可最大化提升合格率。"
 
-# --- !!! 核心修改：将过滤逻辑移入index函数 !!! ---
+# --- !!! 核心修改 1：主页函数现在会预计算基线范围 !!! ---
 @app.route('/', methods=['GET'])
 def index():
     model_ready = bool(model_cache.get('is_ready', False))
     displayable_params = []
+    baseline_ranges = {}
     
-    # 只有在模型训练完成后，才进行参数过滤
     if model_ready:
         all_params = model_cache.get('param_map', {})
+        gb = model_cache.get('golden_baseline', {})
         for key, name in all_params.items():
-            # 这里是之前在模板中的过滤逻辑
             if not any(x in key for x in ['product_id', 'ratio', 'indicator', 'density']):
                 displayable_params.append((key, name))
+                # 预计算基线范围，以便在前端显示
+                mean = gb.get('mean', {}).get(key)
+                std = gb.get('std', {}).get(key)
+                if mean is not None and std is not None:
+                    lower = mean - 3 * std
+                    upper = mean + 3 * std
+                    baseline_ranges[key] = f"[{lower:.2f} ~ {upper:.2f}]"
 
     return render_template(
         'index.html', 
         model_ready=model_ready, 
         cache=model_cache,
-        displayable_params=displayable_params  # 传递预处理好的参数列表
+        displayable_params=displayable_params,
+        baseline_ranges=baseline_ranges # 将基线范围传递给模板
     )
 
 # 训练路由 (保持不变)
 @app.route('/train', methods=['POST'])
 def train():
     global model_cache, PARAM_MAP
-    model_cache.clear() # 重置模型缓存
+    model_cache.clear()
     if 'file' not in request.files: flash("未选择文件", "error"); return redirect(url_for('index'))
     file = request.files['file']
     if not file or file.filename == '': flash("文件无效或文件名为空", "error"); return redirect(url_for('index'))
@@ -166,10 +174,21 @@ def get_full_prediction():
         'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)
     })
 
-# /api/adjust 路由保持不变
+# AI工艺员和调整建议API (保持不变)
+@app.route('/api/recommend_params', methods=['POST'])
+def recommend_params():
+    if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
+    req_data = request.get_json()
+    product_id = req_data.get('product_id', 'DefaultProduct')
+    # 作为一个演示，这里我们直接返回黄金基线的均值
+    gb_mean = model_cache.get('golden_baseline', {}).get('mean', {})
+    params = {k: v for k, v in gb_mean.items() if k in model_cache.get('features', []) and k != 'product_id'}
+    msg = f"为产品'{product_id}'生成了推荐工艺参数(基于黄金基线均值)。"
+    return jsonify({'product_id': product_id, 'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
+
 @app.route('/api/adjust', methods=['POST'])
 def adjust():
-    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
+    if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     data = request.get_json()
     try:
         features, gb = model_cache['features'], model_cache['golden_baseline']
@@ -183,3 +202,4 @@ def adjust():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
+
