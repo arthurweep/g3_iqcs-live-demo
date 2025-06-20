@@ -88,7 +88,7 @@ def train():
         fig_importance = plt.figure(); xgb.plot_importance(clf, max_num_features=10, ax=plt.gca()); plt.tight_layout()
         y_pred_final = (probs_ok >= best_thresh).astype(int)
         metrics = {'accuracy': accuracy_score(y, y_pred_final), 'recall_ng': recall_score(y, y_pred_final, pos_label=0), 'precision_ng': precision_score(y, y_pred_final, pos_label=0), 'f1_ng': f1_score(y, y_pred_final, pos_label=0)}
-        ok_df = df[df['OK_NG'] == 1].copy()
+        ok_df = df[df['OK_NG'] == 1].copy(); ng_df = df[df['OK_NG'] == 0].copy()
         knn_model, ok_df_features = None, ok_df[features_to_use]
         if not ok_df_features.empty:
             knn_model = NearestNeighbors(n_neighbors=5, algorithm='ball_tree'); knn_model.fit(ok_df_features)
@@ -96,28 +96,33 @@ def train():
             'model': clf, 'features': features_to_use, 'best_threshold': best_thresh, 'feature_defaults': X.mean().to_dict(),
             'golden_baseline': {'mean': ok_df[features_to_use].mean().to_dict(), 'std': ok_df[features_to_use].std().to_dict()},
             'ok_df_for_knn': ok_df_features, 'knn_model': knn_model, 'feature_plot': fig_to_base64(fig_importance), 
+            'ng_samples_for_sim': ng_df[features_to_use].to_dict('records'), # --- 缓存不合格品样本 ---
             'metrics': metrics, 'data_analysis': data_analysis, 'filename': file.filename, 'is_ready': True, 'param_map': PARAM_MAP
         }
         flash(f"文件 '{file.filename}' 上传成功，分类器与推荐模型已完成训练！", "success")
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
+# --- !!! 核心修改 2: 增强的失效模拟 !!! ---
 @app.route('/api/simulation/generate', methods=['GET'])
 def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     params, warnings, gb = {}, [], model_cache['golden_baseline']
     features = [f for f in PARAM_MAP.keys() if f not in ['product_id', 'pressure_speed_ratio', 'stress_indicator', 'energy_density']]
     is_failure_scenario = random.random() < (1/6)
-    for feature in features:
-        mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
-        val = mean + random.uniform(-1.5, 1.5) * std
-        params[feature] = val
-    if is_failure_scenario and len(features) > 1:
-        num_outliers = random.randint(1, 2)
-        outlier_features = random.sample(features, num_outliers)
-        for feature in outlier_features:
+    
+    if is_failure_scenario and model_cache.get('ng_samples_for_sim'):
+        # 使用真实的不合格品作为模板
+        base_params = random.choice(model_cache['ng_samples_for_sim'])
+        for feature in features:
+            # 在真实不合格品基础上增加少量噪音
+            params[feature] = base_params.get(feature, 0) * random.uniform(0.98, 1.02)
+    else:
+        # 正常生成合格品
+        for feature in features:
             mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
-            params[feature] = mean + random.choice([-1, 1]) * random.uniform(3.5, 5.0) * std
+            params[feature] = mean + random.uniform(-1, 1) * std
+            
     for feature, val in params.items():
         mean, std = gb.get('mean', {}).get(feature, 1), gb.get('std', {}).get(feature, 0.1)
         if not (mean - 3 * std <= val <= mean + 3 * std): warnings.append(feature)
@@ -144,19 +149,13 @@ def get_full_prediction():
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10); plt.tight_layout()
     return jsonify({'id': data['product_id'], 'params': data['params'], 'status': final_status, 'prob': float(prob_ok), 'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(), 'verdict_reason': verdict_reason, 'waterfall_plot': fig_to_base64(fig)})
 
-# --- !!! 核心修改 1: 修复AI工艺员的KNN调用错误 !!! ---
 @app.route('/api/recommend_params', methods=['POST'])
 def recommend_params():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
     knn_model, ok_df = model_cache.get('knn_model'), model_cache.get('ok_df_for_knn')
     if knn_model is None or ok_df is None or ok_df.empty: return jsonify({'error': '推荐模型不可用，合格品数据不足。'}), 400
-    
-    # --- 关键修复：将查询点转换为具有正确列顺序的DataFrame ---
-    query_dict = model_cache['feature_defaults']
-    query_df = pd.DataFrame([query_dict])[model_cache['features']] # 确保列序正确
-
+    query_dict = model_cache['feature_defaults']; query_df = pd.DataFrame([query_dict])[model_cache['features']]
     distances, indices = knn_model.kneighbors(query_df)
-    
     recommended_params_df = ok_df.iloc[indices[0]].mean(); params = recommended_params_df.to_dict()
     msg = f"已通过机器学习(KNN)从{len(indices[0])}个最优历史案例中生成推荐参数。"
     return jsonify({'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
@@ -177,3 +176,4 @@ def adjust():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
+
