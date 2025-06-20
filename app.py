@@ -29,16 +29,15 @@ PARAM_MAP = {
     "P_cool_act": "冷却水压力 (bar)", "t_glass_meas": "玻璃厚度 (mm)", "pressure_speed_ratio": "压速比",
     "stress_indicator": "应力指标", "energy_density": "能量密度"
 }
-model_cache = {} # 后端不再存储模拟数据
+model_cache = {}
 
-# 辅助函数 (保持不变)
+# 辅助函数和建议生成函数 (保持不变)
 def fig_to_base64(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches='tight')
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-# 优化建议函数 (保持不变)
 def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_values, golden_baseline):
     suggestions_data, problematic_params, negative_shap_total = [], {}, 0
     current_df = pd.DataFrame([current_params])
@@ -64,11 +63,28 @@ def generate_tabular_adjustment_suggestions(current_params, feature_names, shap_
         suggestions_data.append({"display_name": PARAM_MAP.get(feature_name, feature_name), "current_value": details['current_value'], "adjustment_amount": adjustment, "target_value": details['target_value'], "contribution": contribution})
     return suggestions_data, f"共生成 {len(suggestions_data)} 条优化建议。", "基于AI模型分析，修正以下参数可最大化提升合格率。"
 
-# 主页和训练路由 (保持不变)
+# --- !!! 核心修改：将过滤逻辑移入index函数 !!! ---
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', model_ready=bool(model_cache.get('is_ready', False)), cache=model_cache)
+    model_ready = bool(model_cache.get('is_ready', False))
+    displayable_params = []
+    
+    # 只有在模型训练完成后，才进行参数过滤
+    if model_ready:
+        all_params = model_cache.get('param_map', {})
+        for key, name in all_params.items():
+            # 这里是之前在模板中的过滤逻辑
+            if not any(x in key for x in ['product_id', 'ratio', 'indicator', 'density']):
+                displayable_params.append((key, name))
 
+    return render_template(
+        'index.html', 
+        model_ready=model_ready, 
+        cache=model_cache,
+        displayable_params=displayable_params  # 传递预处理好的参数列表
+    )
+
+# 训练路由 (保持不变)
 @app.route('/train', methods=['POST'])
 def train():
     global model_cache, PARAM_MAP
@@ -102,7 +118,7 @@ def train():
     except Exception as e: flash(f"处理文件时出错: {e}", "error")
     return redirect(url_for('index'))
 
-# --- !!! 核心修改：简化并重构模拟相关的API !!! ---
+# 模拟相关的API路由 (保持不变)
 @app.route('/api/simulation/generate', methods=['GET'])
 def generate_simulated_data():
     if not model_cache.get('is_ready'): return jsonify({'error': '模型未训练'}), 400
@@ -123,24 +139,16 @@ def get_full_prediction():
     data = request.get_json()
     batch_id = str(uuid.uuid4())[:8]
     data['product_id'] = f"SIM-{batch_id}"
-
     features = model_cache['features']; input_df = pd.DataFrame([data])
     input_df['pressure_speed_ratio'] = input_df['F_cut_act'] / input_df['v_cut_act']
     input_df['stress_indicator'] = input_df['F_break_peak'] / input_df['t_glass_meas']
     input_df['energy_density'] = input_df['F_cut_act'] * input_df['v_cut_act']
-    input_df.replace([np.inf, -np.inf], np.nan, inplace=True)
-    input_df = input_df.fillna(model_cache['feature_defaults'])
-    input_vector = input_df[features]
-    
-    model = model_cache['model']; explainer = shap.TreeExplainer(model)
-    shap_values_raw = explainer.shap_values(input_vector)
-    # 确保shap_values是1D array
+    input_df.replace([np.inf, -np.inf], np.nan, inplace=True); input_df = input_df.fillna(model_cache['feature_defaults']); input_vector = input_df[features]
+    model = model_cache['model']; explainer = shap.TreeExplainer(model); shap_values_raw = explainer.shap_values(input_vector)
     shap_values = shap_values_raw[0] if isinstance(shap_values_raw, list) and len(shap_values_raw) > 0 else shap_values_raw
     prob_ok = model.predict_proba(input_vector)[0, 1]
     model_says_ng = bool(prob_ok < model_cache['best_threshold'])
-    
     final_status = "ng" if model_says_ng else "ok"
-    
     baseline_warnings = []
     gb = model_cache['golden_baseline']
     for feature, val in data.items():
@@ -148,13 +156,10 @@ def get_full_prediction():
             m, s = gb['mean'][feature], gb['std'][feature]
             if not (m - 3*s <= val <= m + 3*s):
                 baseline_warnings.append(f"参数 '{PARAM_MAP.get(feature, feature)}' 超出黄金基线。")
-    
     verdict_reason = [f"AI模型预测合格概率为 {prob_ok:.2%}"] + baseline_warnings
-    
     fig = plt.figure()
     shap.plots.waterfall(shap.Explanation(values=shap_values, base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10)
     plt.tight_layout()
-    
     return jsonify({
         'id': data['product_id'], 'params': data, 'status': final_status, 'prob': float(prob_ok), 
         'threshold': float(model_cache['best_threshold']), 'shap_values': shap_values.tolist(),
