@@ -1,323 +1,294 @@
 import os
+import io
+import base64
 import logging
-import pandas as pd
 import numpy as np
-import xgboost as xgb
-import shap
+import pandas as pd
 import matplotlib
-from flask import Flask, request, jsonify, render_template
-
-# ==============================================================================
-# 配置区域 - Configuration Area
-# ==============================================================================
-
-# 设置Matplotlib后端，防止在无GUI的服务器上出错
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import shap
+import xgboost as xgb
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
-# 配置日志
+# 配置matplotlib字体为英文，保证云端图表兼容性
+plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 初始化Flask应用
-app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False # 确保中文字符正确显示
-
-# 全局变量，用于存储训练好的模型、特征名称和SHAP解释器
-model = None
-feature_names = None
-explainer = None
-# 假设类别 0 是“合格”，1 是“不合格”
-UNQUALIFIED_CLASS_INDEX = 1 
-
-# --- !!! 关键配置：请根据您的实际工艺要求修改此处的黄金工艺基准 !!! ---
-# 格式为: '参数名': {'min': 最小值, 'max': 最大值}
-# 这里的示例值与前端UI图像中的默认输入值相对应，您需要根据实际工艺范围进行调整。
-GOLDEN_BASELINE = {
-    '参数A': {'min': 10.0, 'max': 20.0}, # 例如，基于15.0的范围
-    '参数B': {'min': 5.0, 'max': 15.0},  # 例如，基于10.0的范围
-    '参数C': {'min': 100, 'max': 120},   # 例如，基于110的范围
-    '参数D': {'min': 0.8, 'max': 1.2},   # 例如，基于0.95的范围
-    '参数E': {'min': 50, 'max': 70}     # 例如，基于60的范围
-    # ... 请根据您的实际工艺数据，继续添加或修改其他参数
-    # 确保这里的参数名（键）与前端HTML中input的'name'属性以及训练数据中的列名完全一致。
+# 参数名映射保持不变
+PARAM_MAP = {
+    "product_id": "产品ID", "F_cut_act": "刀头实际压力 (N)", "v_cut_act": "切割实际速度 (mm/s)",
+    "F_break_peak": "崩边力峰值 (N)", "v_wheel_act": "磨轮线速度 (m/s)", "F_wheel_act": "磨轮压紧力 (N)",
+    "P_cool_act": "冷却水压力 (bar)", "t_glass_meas": "玻璃厚度 (mm)", "pressure_speed_ratio": "压速比",
+    "stress_indicator": "应力指标", "energy_density": "能量密度"
 }
 
+# 全局模型缓存保持不变
+model_cache = {}
 
-# ==============================================================================
-# 辅助函数 - Helper Functions
-# ==============================================================================
+def fig_to_base64(fig):
+    """将matplotlib图形转换为base64字符串，用于在HTML中显示"""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches='tight')
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-def check_baseline(parameters: dict) -> list:
+# --- !!! 核心修改：重写建议生成函数以支持多参数建议 !!! ---
+def calculate_multiple_adjustment_suggestions(current_params, feature_names, shap_values, golden_baseline):
     """
-    检查输入参数是否超出黄金工艺基线。
-    
-    Args:
-        parameters (dict): 包含参数名和值的字典。
-    
-    Returns:
-        list: 包含所有超出基线参数的警告信息字符串列表。
-    """
-    warnings = []
-    for param, value in parameters.items():
-        if param in GOLDEN_BASELINE:
-            baseline = GOLDEN_BASELINE[param]
-            # 检查是否超出范围
-            if not (baseline['min'] <= value <= baseline['max']):
-                warning_msg = (
-                    f"参数'{param}'当前值({value})超出黄金基线范围"
-                    f"[{baseline['min']}, {baseline['max']}]"
-                )
-                warnings.append(warning_msg)
-    return warnings
-
-def generate_multiple_suggestions(parameters: dict, shap_values: np.ndarray) -> list:
-    """
-    当预测不合格时，生成多个参数的优化建议。
-    建议基于SHAP值和是否超出黄金基线。
-
-    Args:
-        parameters (dict): 输入的参数字典。
-        shap_values (np.ndarray): 对应输入的SHAP值（通常为针对不合格类别的SHAP值）。
-
-    Returns:
-        list: 一个包含多个建议的列表，按重要性排序。
+    识别所有问题参数（基于基线和SHAP值），并为每个问题参数生成调整建议。
     """
     suggestions = []
     problematic_params = {}
 
+    current_df = pd.DataFrame([current_params])
+    current_df['pressure_speed_ratio'] = current_df['F_cut_act'] / current_df['v_cut_act']
+    current_df['stress_indicator'] = current_df['F_break_peak'] / current_df['t_glass_meas']
+    current_df['energy_density'] = current_df['F_cut_act'] * current_df['v_cut_act']
+    current_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    current_df = current_df.fillna(model_cache.get('feature_defaults', {}))
+    current_values_array = current_df[feature_names].values.flatten()
+
     # 1. 识别所有问题参数
-    # 确保 feature_names 已被模型训练初始化
-    if not feature_names:
-        return ["模型特征名称未定义，无法生成详细建议。"]
-        
-    for i, param in enumerate(feature_names):
-        current_value = parameters.get(param)
-        
-        # 确保 shap_values 维度正确
-        if i >= len(shap_values):
-            logging.warning(f"SHAP值索引 {i} 超出 shap_values 范围。")
+    for i, feature in enumerate(feature_names):
+        # 忽略复合特征
+        if any(k in feature for k in ['ratio', 'indicator', 'density']):
             continue
 
-        param_shap_value = shap_values[i]
-        
         is_out_of_baseline = False
-        if param in GOLDEN_BASELINE and current_value is not None:
-            baseline = GOLDEN_BASELINE[param]
-            if not (baseline['min'] <= current_value <= baseline['max']):
+        is_shap_negative = shap_values[i] < 0  # SHAP值为负，表示对不合格（NG）有推动作用
+
+        # 检查是否超出黄金基线
+        mean = golden_baseline['mean'].get(feature)
+        std = golden_baseline['std'].get(feature)
+        current_val = current_values_array[i]
+        if mean is not None and std is not None:
+            upper_bound, lower_bound = mean + 3 * std, mean - 3 * std
+            if not (lower_bound <= current_val <= upper_bound):
                 is_out_of_baseline = True
-        
-        # 如果SHAP值为正（推动向“不合格”），或者参数本身就超出了基线，则视为问题参数
-        # 设定一个SHAP值阈值，避免影响微乎其微的参数
-        shap_threshold = 0.01 # 可以根据实际情况调整此阈值
-        if abs(param_shap_value) > shap_threshold or is_out_of_baseline:
-            problematic_params[param] = {
-                'current_value': current_value,
-                'shap_value': param_shap_value,
-                'is_out_of_baseline': is_out_of_baseline
+
+        # 如果参数超出基线或SHAP值为负，则记录为问题参数
+        if is_out_of_baseline or is_shap_negative:
+            problematic_params[feature] = {
+                'shap_value': shap_values[i],
+                'is_out_of_baseline': is_out_of_baseline,
+                'current_value': current_val,
+                'target_value': mean if mean is not None else current_val
             }
-
+            
     if not problematic_params:
-        return ["模型判定不合格，但未找到明确的可调整工艺参数。请检查所有输入是否准确，或尝试重新训练模型。"]
+        return ["AI模型分析未找到明确的可优化参数。请检查所有输入值是否在合理范围内。"], "未能找到有效的调整建议。"
 
-    # 2. 对问题参数按SHAP值（影响力，取绝对值降序）排序
-    sorted_problems = sorted(problematic_params.items(), key=lambda item: abs(item[1]['shap_value']), reverse=True)
+    # 2. 按SHAP值（负向影响力）对问题参数进行排序
+    sorted_problems = sorted(problematic_params.items(), key=lambda item: item[1]['shap_value'])
 
-    # 3. 生成建议
-    for param, details in sorted_problems:
-        reason_parts = []
+    # 3. 为每个问题参数生成建议
+    for feature_name, details in sorted_problems:
+        reasons = []
         if details['is_out_of_baseline']:
-            reason_parts.append("已超出黄金基线")
+            reasons.append("超出黄金基线")
+        if details['shap_value'] < 0:
+            reasons.append(f"对不合格结果影响较大 (SHAP值: {details['shap_value']:.3f})")
         
-        # 判断SHAP值方向，给予具体建议
-        if details['shap_value'] > 0: # SHAP值大于0表示该参数向“不合格”方向推动
-            reason_parts.append(f"对不合格结果有正向推动(SHAP值: {details['shap_value']:.3f})")
-        elif details['shap_value'] < 0: # SHAP值小于0表示该参数向“合格”方向推动
-             reason_parts.append(f"对不合格结果有负向推动(SHAP值: {details['shap_value']:.3f})")
-            
-        suggestion_text = f"参数'{param}' (当前值: {details['current_value']}): "
-        
-        # 提供具体建议值
-        if param in GOLDEN_BASELINE:
-            baseline = GOLDEN_BASELINE[param]
-            # 建议调整到基线的中点，或者根据SHAP值方向微调
-            target_value = (baseline['min'] + baseline['max']) / 2
-            
-            # 如果当前值高于基线上限，且SHAP值提示需要降低，建议降至上限
-            if details['current_value'] > baseline['max'] and details['shap_value'] > 0:
-                target_value = baseline['max']
-                suggestion_text += f"建议将其值降低至黄金基线上限 {baseline['max']:.2f}。"
-            # 如果当前值低于基线下限，且SHAP值提示需要升高，建议升至下限
-            elif details['current_value'] < baseline['min'] and details['shap_value'] > 0:
-                target_value = baseline['min']
-                suggestion_text += f"建议将其值升高至黄金基线下限 {baseline['min']:.2f}。"
-            # 如果在基线内但SHAP值异常，建议向有利方向微调
-            elif baseline['min'] <= details['current_value'] <= baseline['max'] and details['shap_value'] > 0:
-                 suggestion_text += f"建议微调至黄金基线内，如 {target_value:.2f}，以优化结果。"
-            else: # 其他情况，建议回到基线中心
-                suggestion_text += f"建议调整至黄金基线范围[{baseline['min']}, {baseline['max']}]内，例如 {target_value:.2f}。"
-        else:
-            suggestion_text += "请基于工艺经验进行调整（无基线参考）。 "
-            
-        suggestion_text += f" 原因: {'; '.join(reason_parts)}。"
+        display_name = PARAM_MAP.get(feature_name, feature_name)
+        suggestion_text = (
+            f"参数 '{display_name}' (当前值: {details['current_value']:.2f}): "
+            f"建议调整至黄金基线均值附近 ({details['target_value']:.2f})。 "
+            f"原因: {'; '.join(reasons)}。"
+        )
         suggestions.append(suggestion_text)
-        
-    return suggestions
+
+    message = f"共生成 {len(suggestions)} 条优化建议，按影响力排序。"
+    return suggestions, message
 
 
-# ==============================================================================
-# Flask路由 - Flask Routes
-# ==============================================================================
-
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
-    """渲染主页面"""
-    return render_template('index.html')
+    model_ready = bool(model_cache.get('is_ready', False))
+    displayable_params = []
+    if model_ready and 'param_map' in model_cache:
+        displayable_params = [
+            (k, v) for k, v in model_cache['param_map'].items()
+            if not any(x in k for x in ['product_id', 'ratio', 'indicator', 'density'])
+        ]
+    return render_template('index.html', model_ready=model_ready, cache=model_cache, displayable_params=displayable_params)
 
 @app.route('/train', methods=['POST'])
-def train_model_endpoint():
-    """
-    模型训练接口
-    在实际应用中，您会从上传的文件中读取数据
-    """
-    global model, feature_names, explainer
-    
-    # --- 这是一个模拟的训练过程，请替换为您的实际数据加载和模型训练逻辑 ---
-    logging.info("开始模型训练...")
+def train():
+    global model_cache, PARAM_MAP
+    model_cache.clear()
+    if 'file' not in request.files:
+        flash("未选择文件", "error")
+        return redirect(url_for('index'))
+    file = request.files['file']
+    if not file or file.filename == '':
+        flash("文件无效或文件名为空", "error")
+        return redirect(url_for('index'))
     try:
-        # 生产环境通常从数据库或文件加载真实数据
-        # 例如：
-        # data_path = 'data/your_training_data.csv'
-        # if not os.path.exists(data_path):
-        #     raise FileNotFoundError(f"训练数据文件未找到: {data_path}")
-        # df = pd.read_csv(data_path)
-        
-        # 使用模拟数据进行演示，数据结构与GOLDEN_BASELINE匹配
-        num_samples = 1000 # 增加样本量
-        simulated_data = {}
-        for name, val in GOLDEN_BASELINE.items():
-            # 生成模拟数据时，允许一部分数据超出基线，以模拟真实情况
-            range_span = val['max'] - val['min']
-            simulated_data[name] = np.random.uniform(val['min'] - range_span*0.5, 
-                                                     val['max'] + range_span*0.5, 
-                                                     num_samples)
-        df = pd.DataFrame(simulated_data)
-        
-        # 模拟一个更复杂的质量标签逻辑，增加“不合格”样本的代表性
-        # 例如，某些参数超出了范围就容易不合格
-        df['quality_label'] = 0 # 默认合格
-        # 模拟不合格条件：如果参数A或C严重偏离基线，或参数B和D组合异常
-        if '参数A' in df.columns and '参数C' in df.columns:
-            df.loc[(df['参数A'] < GOLDEN_BASELINE['参数A']['min'] - 2) | 
-                   (df['参数A'] > GOLDEN_BASELINE['参数A']['max'] + 2) |
-                   (df['参数C'] < GOLDEN_BASELINE['参数C']['min'] - 5) | 
-                   (df['参数C'] > GOLDEN_BASELINE['参数C']['max'] + 5), 'quality_label'] = 1
-        if '参数B' in df.columns and '参数D' in df.columns:
-            df.loc[(df['参数B'] < GOLDEN_BASELINE['参数B']['min'] - 1) & 
-                   (df['参数D'] > GOLDEN_BASELINE['参数D']['max'] + 0.05), 'quality_label'] = 1
-        
-        logging.info(f"模拟数据生成完成，样本数: {len(df)}，合格样本: {len(df[df['quality_label'] == 0])}，不合格样本: {len(df[df['quality_label'] == 1])}")
+        # 您的数据加载和模型训练逻辑保持不变
+        df = pd.read_csv(io.StringIO(file.stream.read().decode("UTF8")))
+        df['pressure_speed_ratio'] = df['F_cut_act'] / df['v_cut_act']
+        df['stress_indicator'] = df['F_break_peak'] / df['t_glass_meas']
+        df['energy_density'] = df['F_cut_act'] * df['v_cut_act']
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        features_to_use = [f for f in PARAM_MAP.keys() if f != "product_id"]
+        X = df[features_to_use].copy()
+        y = df["OK_NG"]
+        X = X.fillna(X.mean())
 
-        X = df.drop('quality_label', axis=1)
-        y = df['quality_label']
-        
-        feature_names = X.columns.tolist()
-        
-        # 使用XGBoost进行分类，优化参数
-        model = xgb.XGBClassifier(
-            objective='binary:logistic', # 二分类逻辑回归
-            eval_metric='logloss',       # 评估指标
-            use_label_encoder=False,     # 抑制警告
-            n_estimators=100,            # 迭代次数
-            learning_rate=0.1,           # 学习率
-            max_depth=5,                 # 树的最大深度
-            subsample=0.8,               # 采样率
-            colsample_bytree=0.8,        # 列采样率
-            random_state=42              # 随机种子
+        count_ok, count_ng = y.value_counts().get(1, 0), y.value_counts().get(0, 0)
+        scale_pos_weight_value = count_ng / count_ok if count_ok > 0 else 1 # Corrected logic for XGBoost: count_negative / count_positive
+
+        clf = xgb.XGBClassifier(
+            n_estimators=150, max_depth=5, learning_rate=0.1, subsample=0.8,
+            colsample_bytree=0.8, gamma=0.1, random_state=42,
+            use_label_encoder=False, scale_pos_weight=scale_pos_weight_value,
+            eval_metric='logloss'
         )
-        model.fit(X, y)
-        
-        explainer = shap.TreeExplainer(model)
-        
-        logging.info("模型训练成功！")
-        return jsonify({'status': 'success', 'message': '模型已成功训练并加载！'})
-    except Exception as e:
-        logging.error(f"模型训练失败: {e}", exc_info=True) # 打印详细错误信息
-        return jsonify({'status': 'error', 'message': f"模型训练失败: {str(e)} 请检查训练数据和配置。"}), 500
+        clf.fit(X, y)
 
+        probs_ok = clf.predict_proba(X)[:, 1]
+        best_f1_macro, best_thresh = 0.0, 0.5
+        for t in np.arange(0.01, 1.0, 0.01):
+            f1 = f1_score(y, (probs_ok >= t).astype(int), average='macro', zero_division=0)
+            if f1 > best_f1_macro:
+                best_f1_macro, best_thresh = f1, t
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    """
-    接收生产参数，进行质量判定，并返回包含预警和优化建议的结果
-    """
-    if model is None or explainer is None:
-        return jsonify({'status': 'error', 'message': '模型未训练或加载，请先进行模型训练！'}), 400
-
-    try:
-        # 从POST请求中获取JSON数据
-        input_data = request.get_json()
-        if not input_data:
-            return jsonify({'status': 'error', 'message': '未收到输入数据，请提供JSON格式的参数。'}), 400
+        fig_importance = plt.figure()
+        xgb.plot_importance(clf, max_num_features=10, ax=plt.gca())
+        plt.tight_layout()
         
-        # 确保所有预期的特征都在输入数据中，并填充缺失值
-        processed_input_data = {}
-        for name in feature_names:
-            processed_input_data[name] = input_data.get(name, 0.0) # 缺失值用0.0填充，或根据实际情况调整
-
-        input_df = pd.DataFrame([processed_input_data])
-        # 确保列顺序与训练时一致
-        input_df = input_df[feature_names] 
-        
-        # 1. 检查参数是否超出黄金基线
-        warnings = check_baseline(processed_input_data) # 使用处理过的输入数据进行检查
-        
-        # 2. 模型预测
-        prediction_proba = model.predict_proba(input_df)[0]
-        prediction = np.argmax(prediction_proba) # 获取概率最高的类别索引 (0或1)
-        
-        result_status = "合格" if prediction == 0 else "不合格"
-        confidence = prediction_proba[prediction] * 100
-        
-        # 3. 计算SHAP值
-        # SHAP TreeExplainer.shap_values() 返回的是一个列表，每个元素对应一个类别
-        # 对于二分类，shap_values[0] 是预测为类别0（合格）的SHAP值
-        # shap_values[1] 是预测为类别1（不合格）的SHAP值
-        # 我们关注的是导致“不合格”的SHAP值，所以取 UNQUALIFIED_CLASS_INDEX
-        
-        # 注意：SHAP值为np.ndarray，需要取第一行（因为我们只预测一个样本）
-        shap_values_raw = explainer.shap_values(input_df.iloc[0]) # 获取单个样本的SHAP值
-        
-        # 如果 explainer.shap_values 返回一个列表（多输出模型或分类模型），则取对应类别的SHAP值
-        shap_values_for_target_class = shap_values_raw[UNQUALIFIED_CLASS_INDEX] if isinstance(shap_values_raw, list) else shap_values_raw
-        
-        # 4. 准备返回的JSON数据
-        response = {
-            'status': 'success',
-            'prediction': result_status,
-            'confidence': f"{confidence:.2f}%",
-            'warnings': warnings, # 无论合格与否，都返回预警信息
-            'suggestions': []
+        y_pred_final = (probs_ok >= best_thresh).astype(int)
+        metrics = {
+            'accuracy': accuracy_score(y, y_pred_final),
+            'recall_ng': recall_score(y, y_pred_final, pos_label=0),
+            'precision_ng': precision_score(y, y_pred_final, pos_label=0),
+            'f1_ng': f1_score(y, y_pred_final, pos_label=0)
         }
         
-        # 5. 如果不合格，生成多参数优化建议
-        if result_status == "不合格":
-            suggestions = generate_multiple_suggestions(processed_input_data, shap_values_for_target_class)
-            response['suggestions'] = suggestions
-            
-        return jsonify(response)
-        
+        ok_df = df[df['OK_NG'] == 1]
+        model_cache = {
+            'model': clf, 'features': features_to_use, 'best_threshold': best_thresh,
+            'feature_defaults': X.mean().to_dict(),
+            'golden_baseline': {'mean': ok_df[features_to_use].mean().to_dict(), 'std': ok_df[features_to_use].std().to_dict()},
+            'knowledge_base': pd.DataFrame(ok_df),
+            'feature_plot': fig_to_base64(fig_importance), 'metrics': metrics,
+            'filename': file.filename, 'is_ready': True, 'param_map': PARAM_MAP
+        }
+        flash(f"文件 '{file.filename}' 上传成功，模型已完成训练！", "success")
     except Exception as e:
-        logging.error(f"预测过程中发生错误: {e}", exc_info=True) # 打印详细错误信息
-        return jsonify({'status': 'error', 'message': f'预测失败: {str(e)}'}), 500
+        flash(f"处理文件时出错: {e}", "error")
+    return redirect(url_for('index'))
 
+@app.route('/api/process_monitor', methods=['POST'])
+def process_monitor():
+    # 此API保持不变
+    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
+    data, warnings, gb = request.get_json(), [], model_cache['golden_baseline']
+    for p, v in data.items():
+        if p in gb['mean'] and p in gb['std']:
+            m, s = gb['mean'][p], gb['std'][p]
+            if not (m - 3*s <= v <= m + 3*s):
+                warnings.append(f"参数 '{PARAM_MAP.get(p,p)}' ({v:.2f}) 超出黄金基线范围 [{m-3*s:.2f}, {m+3*s:.2f}]")
+    return jsonify({'status': 'warning' if warnings else 'ok', 'messages': warnings or ['所有参数均在黄金基线范围内']})
 
-# ==============================================================================
-# 启动应用 - Application Runner
-# ==============================================================================
+@app.route('/api/recommend_params', methods=['POST'])
+def recommend_params():
+    # 此API保持不变
+    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
+    product_id, kb, features = request.get_json().get('product_id'), model_cache['knowledge_base'], model_cache['features']
+    cases = kb[kb['product_id'] == product_id]
+    if cases.empty:
+        params, msg = kb[features].mean().to_dict(), f"知识库无产品'{product_id}'案例，返回通用建议。"
+    else:
+        params, msg = cases[features].mean().to_dict(), f"为产品'{product_id}'生成了推荐参数。"
+    return jsonify({'product_id': product_id, 'recommended_params': params, 'message': msg, 'param_map': PARAM_MAP})
+
+@app.route('/api/predict', methods=['POST'])
+def predict():
+    # 此API的逻辑和返回值保持不变，前端将负责解析'status'和'verdict_reason'
+    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
+    data = request.get_json()
+    try:
+        features = model_cache['features']
+        input_df = pd.DataFrame([data])
+        input_df['pressure_speed_ratio'] = input_df['F_cut_act'] / input_df['v_cut_act']
+        input_df['stress_indicator'] = input_df['F_break_peak'] / input_df['t_glass_meas']
+        input_df['energy_density'] = input_df['F_cut_act'] * input_df['v_cut_act']
+        input_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        input_df = input_df.fillna(model_cache['feature_defaults'])
+        input_vector = input_df[features]
+
+        baseline_warnings = []
+        gb = model_cache['golden_baseline']
+        for feature in features:
+            if not any(k in feature for k in ['ratio', 'indicator', 'density']) and feature in gb['mean']:
+                val = input_vector[feature].iloc[0]
+                m, s = gb['mean'][feature], gb['std'][feature]
+                if not (m - 3*s <= val <= m + 3*s):
+                    baseline_warnings.append(f"参数 '{PARAM_MAP.get(feature, feature)}' ({val:.2f}) 超出黄金工艺基线范围 [{m-3*s:.2f}, {m+3*s:.2f}]")
+        
+        model = model_cache['model']
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(input_vector)
+        prob_ok = model.predict_proba(input_vector)[0, 1]
+        model_says_ng = bool(prob_ok < model_cache['best_threshold'])
+
+        final_status = "ok"
+        verdict_reason = []
+        if model_says_ng:
+            final_status = "ng"
+            verdict_reason.append(f"AI模型预测合格概率仅为 {prob_ok:.2%}，低于阈值 {model_cache['best_threshold']:.2%}")
+            verdict_reason.extend(baseline_warnings)
+        elif baseline_warnings:
+            final_status = "warning"
+            verdict_reason.append("虽然AI预测合格，但存在过程异常，有潜在质量风险。")
+            verdict_reason.extend(baseline_warnings)
+        else:
+            verdict_reason.append("所有参数均在基线内，且AI模型预测合格。")
+
+        fig = plt.figure()
+        shap.plots.waterfall(shap.Explanation(values=shap_values[0], base_values=explainer.expected_value, data=input_vector.iloc[0], feature_names=features), show=False, max_display=10)
+        plt.tight_layout()
+
+        return jsonify({
+            'status': final_status,
+            'prob': float(prob_ok), 'threshold': float(model_cache['best_threshold']),
+            'waterfall_plot': fig_to_base64(fig),
+            'input_data': data,
+            'shap_values': shap_values[0].tolist(),
+            'verdict_reason': verdict_reason
+        })
+    except Exception as e:
+        return jsonify({'error': f'预测失败: {str(e)}'}), 500
+
+@app.route('/api/adjust', methods=['POST'])
+def adjust():
+    # --- !!! 核心修改：调用新函数并返回建议列表 !!! ---
+    if not model_cache.get('is_ready'): return jsonify({'error': '请先上传数据并训练模型'}), 400
+    data = request.get_json()
+    try:
+        features, gb = model_cache['features'], model_cache['golden_baseline']
+        input_data, shap_values = data.get('input_data'), data.get('shap_values')
+        
+        # 调用新的多参数建议函数
+        suggestions, message = calculate_multiple_adjustment_suggestions(input_data, features, shap_values, gb)
+        
+        # 返回新的数据结构
+        return jsonify({
+            'suggestions': suggestions, # 从 'adjustments' 改为 'suggestions' 列表
+            'message': message,
+            'param_map': PARAM_MAP
+        })
+    except Exception as e:
+        app.logger.error(f"参数调整时出错: {e}", exc_info=True)
+        return jsonify({'error': f'参数调整失败: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    # Render.com会设置PORT环境变量
-    # 在本地开发时，如果没有设置PORT环境变量，会使用5000端口
-    port = int(os.environ.get('PORT', 5000))
-    # 0.0.0.0表示监听所有可用的网络接口，这对于云部署是必需的
-    app.run(host='0.0.0.0', port=port, debug=True)
-
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
