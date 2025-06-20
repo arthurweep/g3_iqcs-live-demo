@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.1</title>
+    <title>智能玻璃质检系统 (IQCS) - 连续生产模拟版 v3.2</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
@@ -19,9 +19,12 @@
         .suggestion-table th { background-color: #0d6efd; color: white; }
         .contribution-positive { color: #28a745; font-weight: bold; }
         @keyframes flash-warning { 0%, 100% { background-color: #fff3cd; box-shadow: 0 0 8px #ffc107; } 50% { background-color: #ffc107; box-shadow: none; } }
-        .input-warning { animation: flash-warning 1s 2; } /* Flash twice then stop */
+        .input-warning { animation: flash-warning 1s 2; }
         @keyframes highlight-module { 0%, 100% { box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.5); } 50% { box-shadow: 0 0 15px 5px rgba(13, 110, 253, 1); } }
         .module-highlight { animation: highlight-module 1s 1; }
+        /* --- !!! 核心修改 1: AI工艺员多列布局 !!! --- */
+        #recommend-results ul { column-count: 2; column-gap: 20px; }
+        @media (max-width: 768px) { #recommend-results ul { column-count: 1; } }
     </style>
 </head>
 <body>
@@ -34,7 +37,7 @@
     {% if model_ready %}
     <div class="card"><div class="card-body"><h2 class="section-header">训练结果概览 (基于文件: {{ cache.filename }})</h2><div class="row"><div class="col-md-6"><h3>模型性能指标</h3><table class="table table-bordered"><tbody><tr><th>准确率</th><td>{{ "%.2f%%"|format(cache.metrics.accuracy*100) }}</td></tr><tr><th>不合格品召回率</th><td>{{ "%.2f%%"|format(cache.metrics.recall_ng*100) }}</td></tr><tr><th>不合格品精确率</th><td>{{ "%.2f%%"|format(cache.metrics.precision_ng*100) }}</td></tr><tr><th>不合格品F1分数</th><td>{{ "%.3f"|format(cache.metrics.f1_ng) }}</td></tr></tbody></table><div class="mt-4"><h3>模型解读与数据分析</h3><p>本系统采用<strong>XGBoost</strong>算法，通过组合多个决策树来构建强大的预测模型，尤其擅长处理工业领域的复杂表格数据。</p><ul class="list-group"><li class="list-group-item d-flex justify-content-between align-items-center">总样本数<span class="badge bg-primary rounded-pill">{{ cache.data_analysis.total_samples }}</span></li><li class="list-group-item d-flex justify-content-between align-items-center">合格品 (OK) 数量<span class="badge bg-success rounded-pill">{{ cache.data_analysis.count_ok }} ({{ "%.2f%%"|format(cache.data_analysis.ok_percentage) }})</span></li><li class="list-group-item d-flex justify-content-between align-items-center">不合格品 (NG) 数量<span class="badge bg-danger rounded-pill">{{ cache.data_analysis.count_ng }} ({{ "%.2f%%"|format(cache.data_analysis.ng_percentage) }})</span></li></ul></div></div><div class="col-md-6"><h3>特征重要性</h3><img src="data:image/png;base64,{{ cache.feature_plot }}" class="img-fluid"></div></div></div></div>
     
-    <div class="card"><div class="card-body"><h2 class="section-header">模块二：AI工艺员 (手动查询)</h2><div class="row align-items-center"><div class="col-md-5"><form id="recommend-form"><div class="mb-3"><label for="product_id" class="form-label">产品ID</label><input type="text" class="form-control" id="product_id" name="product_id" value="DefaultProduct"></div><button type="submit" class="btn btn-success w-100">获取推荐参数</button></form></div><div class="col-md-7"><div id="recommend-results" class="mt-3 mt-md-0"></div></div></div></div></div>
+    <div class="card"><div class="card-body"><h2 class="section-header">模块二：AI工艺员 (手动查询)</h2><form id="recommend-form" class="mb-3"><div class="row g-3 align-items-end"><div class="col"><label for="product_id" class="form-label">产品ID</label><input type="text" class="form-control" id="product_id" name="product_id" value="DefaultProduct"></div><div class="col-auto"><button type="submit" class="btn btn-success w-100">获取推荐参数</button></div></div></form><div id="recommend-results"></div></div></div>
 
     <div class="card"><div class="card-body"><h2 class="section-header">步骤三：连续生产模拟</h2><div class="d-flex justify-content-between align-items-center"><div><button id="start-sim-btn" class="btn btn-lg btn-success"><i class="bi bi-play-circle-fill"></i> 开始模拟</button><button id="stop-sim-btn" class="btn btn-lg btn-danger" disabled><i class="bi bi-stop-circle-fill"></i> 结束模拟</button></div><div><button id="export-ok-btn" class="btn btn-outline-success" disabled><i class="bi bi-clipboard-check"></i> 复制合格品</button><button id="export-ng-btn" class="btn btn-outline-danger" disabled><i class="bi bi-clipboard-x"></i> 复制不合格品</button></div></div></div></div>
     
@@ -66,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/recommend_params', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             const result = await response.json();
             const resultsDiv = document.getElementById('recommend-results');
-            let paramsHTML = `<div class="alert alert-info">${result.message}</div><ul class="list-group">`;
+            let paramsHTML = `<div class="alert alert-info">${result.message}</div><ul class="list-group list-unstyled">`;
             for (let key in result.recommended_params) {
                 if (result.param_map[key]) {
                     paramsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${result.param_map[key]}<span class="badge bg-primary rounded-pill">${parseFloat(result.recommended_params[key]).toFixed(3)}</span></li>`;
@@ -101,7 +104,11 @@ document.addEventListener('DOMContentLoaded', function() {
         targetDiv.innerHTML = `<div class="row g-4"><div class="col-lg-7"><div class="verdict-box ${verdictClass}"><h4 class="section-header">诊断结论</h4><h5 class="${titleClass}">最终判定: ${statusText}</h5><p><strong>诊断依据:</strong></p>${reasonsHTML}<hr><p><strong>AI模型内部判断:</strong></p><table class="table table-bordered" style="width: auto;"><tbody><tr><td>AI模型预测合格概率</td><td>${(result.prob * 100).toFixed(2)}%</td></tr><tr><td>判定阈值</td><td>>${(result.threshold * 100).toFixed(2)}%</td></tr></tbody></table></div></div><div class="col-lg-5"><div class="verdict-box" style="background-color: #fff; border: 1px solid #ddd;"><h4 class="section-header">SHAP可解释性分析</h4><img src="data:image/png;base64,${result.waterfall_plot}" class="img-fluid"></div></div></div>`;
     };
     
+    // --- !!! 核心修改 2b, 3: 修复并优化模拟流程 !!! ---
     const runSimulationStep = async () => {
+        monitorCard.classList.remove('module-highlight'); // Reset highlight
+        predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">AI侦探正在分析...</p></div>';
+        
         const genResponse = await fetch('/api/simulation/generate');
         const genData = await genResponse.json();
         if (genData.error) { stopSimulation(); alert(`模拟出错: ${genData.error}`); return; }
@@ -116,13 +123,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         monitorCard.classList.add('module-highlight');
-        setTimeout(() => monitorCard.classList.remove('module-highlight'), 1000);
-
-        predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">AI侦探正在分析...</p></div>';
+        setTimeout(() => monitorCard.classList.remove('module-highlight'), 2000);
         
         const predResponse = await fetch('/api/simulation/get_full_prediction', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({'params': genData.params, 'product_id': genData.product_id}) });
         const predResult = await predResponse.json();
-        if (predResult.error) { stopSimulation(); alert(`判定出错: ${predResult.error}`); return; }
+        
+        if (predResult.error) {
+            predictResultsDiv.innerHTML = `<div class="alert alert-danger">AI侦探分析失败: ${predResult.error}</div>`;
+            return;
+        }
         
         renderVerdict(predictResultsDiv, predResult);
         historicalRecords[predResult.id] = predResult;
@@ -140,6 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
         historicalRecords = {}; okTableBody.innerHTML = ''; ngTableBody.innerHTML = '';
         okCountBadge.textContent = '0'; ngCountBadge.textContent = '0';
         predictResultsDiv.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">模拟即将开始...</p></div>';
+        
         setTimeout(() => {
             runSimulationStep();
             simulationInterval = setInterval(runSimulationStep, 15000);
